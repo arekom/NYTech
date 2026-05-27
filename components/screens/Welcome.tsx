@@ -27,16 +27,15 @@ export default function Welcome({ onBegin }: { onBegin: () => void }) {
       </header>
 
       <div className="stage-body">
-        <span className="eyebrow">A recording for the version of you</span>
+        <span className="eyebrow">Your future self is listening</span>
         <hr className="rule" />
         <h1 className="headline">
-          Speak to the you<br />
-          already on the other side<br />
-          of the pattern <em>holding you back</em>.
+          Speak to the version of you<br />
+          who already <em>made it</em>.
         </h1>
         <p className="subtext">
-          One take. One question. Ten days from now,<br />
-          your future self sends it home.
+          One take. One question.<br />
+          Ten days from now, you&rsquo;ll hear it back.
         </p>
         <hr className="rule" style={{ marginTop: 40 }} />
         <button className="linear-btn" onClick={onBegin} autoFocus>
