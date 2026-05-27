@@ -28,8 +28,7 @@ export default function Welcome({ onBegin }: { onBegin: () => void }) {
 
       <div className="stage-body">
         <span className="eyebrow">Your future self is listening</span>
-        <hr className="rule" />
-        <h1 className="headline">
+        <h1 className="headline" style={{ marginTop: 28 }}>
           Speak to the version of you<br />
           who already <em>made it</em>.
         </h1>
@@ -37,8 +36,7 @@ export default function Welcome({ onBegin }: { onBegin: () => void }) {
           One take. One question.<br />
           Ten days from now, you&rsquo;ll hear it back.
         </p>
-        <hr className="rule" style={{ marginTop: 40 }} />
-        <button className="linear-btn" onClick={onBegin} autoFocus>
+        <button className="linear-btn" style={{ marginTop: 40 }} onClick={onBegin} autoFocus>
           Begin <span className="arrow">→</span>
         </button>
       </div>
