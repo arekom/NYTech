@@ -1,0 +1,565 @@
+/* ----------------------------------------------------------------------------
+   Space of Mind — brand identity tokens
+   Mental fitness infrastructure. Loving. Direct. No BS.
+   Palette + type per Space of Mind Brand Identity Guidelines.
+---------------------------------------------------------------------------- */
+
+:root {
+  /* Core palette (per guidelines: Quiet Lavender, Tranquil Blue, Quiet Meadow,
+     Calm Grey, Black, White). Names match the brand book. */
+  --quiet-lavender: #B4B4DB;
+  --tranquil-blue: #9AB6CC;
+  --quiet-meadow: #CADAC8;
+  --calm-grey: #D8DCDE;
+  --core-dark: #1B1B2F;      /* Quiet Lavender 100 — used as primary ink */
+  --black: #000000;
+  --white: #FFFFFF;
+
+  /* Derived shades from the brand book */
+  --lavender-soft: #E3E3FF;
+  --lavender-haze: #F0F0FF;
+  --lavender-mist: #F7F7FF;
+  --blue-soft: #DAE8F2;
+  --blue-haze: #EFF8FE;
+  --grey-fog: #B0B3B5;
+  --grey-deep: #5F6264;
+  --rule: rgba(27, 27, 47, 0.12);
+  --rule-strong: rgba(27, 27, 47, 0.24);
+
+  /* Semantic tokens */
+  --bg: var(--lavender-mist);
+  --bg-elevated: var(--white);
+  --ink: var(--core-dark);
+  --ink-dim: var(--grey-deep);
+  --ink-faint: var(--grey-fog);
+  --accent: var(--quiet-lavender);
+  --signal: var(--core-dark);
+  --signal-hot: #585874;          /* Quiet Lavender 70 — calm REC indicator, not red */
+
+  /* Fonts. Neue Haas Grotesk Display Pro is the licensed brand face; we
+     substitute Inter for sans (closest free Grotesk) and JetBrains Mono for
+     the tag/label monospace. Both loaded via next/font/google in layout.tsx. */
+  --font-display: var(--font-sans), "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-body: var(--font-sans), "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-mono-feature), "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --rhythm: 24px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 18px;
+  line-height: 1.5;          /* ~150% — brand's "just right" leading */
+  letter-spacing: 0;          /* brand uses 0% tracking on paragraphs */
+  height: 100%;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+#__next, main { height: 100%; }
+
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+input, textarea { font: inherit; color: inherit; }
+
+::selection { background: var(--quiet-lavender); color: var(--core-dark); }
+
+/* ----------------------------------------------------------------------------
+   Layout primitives
+---------------------------------------------------------------------------- */
+.stage {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(24px, 5vh, 56px) clamp(24px, 6vw, 80px);
+  background:
+    radial-gradient(ellipse at top, rgba(180, 180, 219, 0.22), transparent 60%),
+    var(--bg);
+}
+
+.stage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--ink-dim);
+}
+
+.stage-header .brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  color: var(--core-dark);
+}
+
+.stage-header .meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.stage-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  position: relative;
+}
+
+.stage-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+/* ----------------------------------------------------------------------------
+   Typography — Geist (Neue Haas Grotesk substitute)
+   Brand uses 130–176% leading; we sit around 150% as the "just right" default.
+---------------------------------------------------------------------------- */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.rule {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  border: none;
+  border-top: 1px solid var(--rule);
+  margin: 28px 0;
+}
+
+.headline {
+  font-family: var(--font-display);
+  font-weight: 500;            /* brand's "55 Roman / 65 Medium" range */
+  font-size: clamp(36px, 4.8vw, 56px);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  max-width: 20ch;
+  margin: 0 auto;
+  color: var(--core-dark);
+}
+
+.headline em {
+  font-style: normal;
+  color: var(--core-dark);
+  background: linear-gradient(180deg, transparent 62%, rgba(180, 180, 219, 0.6) 62%);
+  padding: 0 0.05em;
+}
+
+.subtext {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 16px;
+  color: var(--ink-dim);
+  max-width: 38ch;
+  margin: 22px auto 0;
+  line-height: 1.55;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+/* ----------------------------------------------------------------------------
+   CTA — brand book shows a pill button (147x59 px, 18pt Neue Haas Roman).
+   We keep the editorial "line with arrow" pattern but soften the corners
+   and offer a primary solid variant for the brand-faithful CTA.
+---------------------------------------------------------------------------- */
+.linear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 28px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  color: var(--white);
+  background: var(--core-dark);
+  border: 1px solid var(--core-dark);
+  border-radius: 999px;
+  min-width: 220px;
+  justify-content: center;
+  transition: background 0.25s ease, color 0.25s ease,
+              border-color 0.25s ease, transform 0.2s ease;
+}
+
+.linear-btn:hover,
+.linear-btn:focus-visible {
+  background: var(--quiet-lavender);
+  border-color: var(--quiet-lavender);
+  color: var(--core-dark);
+  outline: none;
+}
+
+.linear-btn:active { transform: translateY(1px); }
+
+.linear-btn[disabled] {
+  background: transparent;
+  color: var(--ink-faint);
+  border-color: var(--rule);
+  cursor: not-allowed;
+}
+
+.linear-btn .arrow {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 16px;
+  transition: transform 0.25s ease;
+}
+
+.linear-btn:hover .arrow { transform: translateX(4px); }
+
+/* Ghost variant for secondary actions */
+.linear-btn.ghost {
+  background: transparent;
+  color: var(--core-dark);
+  border-color: var(--rule-strong);
+}
+
+.linear-btn.ghost:hover,
+.linear-btn.ghost:focus-visible {
+  background: var(--lavender-haze);
+  border-color: var(--core-dark);
+  color: var(--core-dark);
+}
+
+/* ----------------------------------------------------------------------------
+   Form fields
+---------------------------------------------------------------------------- */
+.field-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  text-align: left;
+}
+
+.field-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.field-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--rule-strong);
+  padding: 10px 0 12px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--core-dark);
+  letter-spacing: -0.005em;
+  caret-color: var(--core-dark);
+  user-select: text;
+}
+
+.field-input::placeholder {
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+
+.field-input:focus {
+  outline: none;
+  border-bottom-color: var(--quiet-lavender);
+}
+
+/* ----------------------------------------------------------------------------
+   Prompt screen extras
+---------------------------------------------------------------------------- */
+.optional-prompts {
+  margin-top: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 520px;
+  text-align: left;
+}
+
+.optional-prompts .label { margin-bottom: 6px; }
+
+.optional-prompts li {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--ink-dim);
+  list-style: none;
+  line-height: 1.5;
+}
+
+/* ----------------------------------------------------------------------------
+   Recording screen
+---------------------------------------------------------------------------- */
+.recording-stage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.recording-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  flex-shrink: 0;
+}
+
+.recording-meta .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--signal-hot);
+  border-radius: 50%;
+  margin-right: 12px;
+  animation: pulse 1.8s ease-in-out infinite;
+  vertical-align: middle;
+}
+
+.recording-meta .timer {
+  color: var(--core-dark);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}
+
+.waveform-container {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 24px 0;
+}
+
+.waveform-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.recording-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  flex-shrink: 0;
+}
+
+.stop-btn {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--core-dark);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  background: var(--white);
+  transition: color 0.25s, border-color 0.25s, background 0.25s;
+}
+
+.stop-btn:hover {
+  color: var(--core-dark);
+  border-color: var(--core-dark);
+  background: var(--lavender-haze);
+}
+
+.stop-btn .square {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  background: var(--signal-hot);
+  border-radius: 1px;
+}
+
+.recording-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+.recording-hint.visible { opacity: 1; }
+
+.min-duration-gate {
+  position: absolute;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: 17px;
+  color: var(--ink-dim);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+
+.min-duration-gate.visible { opacity: 1; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.86); }
+}
+
+/* ----------------------------------------------------------------------------
+   Processing screen
+---------------------------------------------------------------------------- */
+.processing-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 36px;
+  width: 100%;
+  max-width: 600px;
+}
+
+.processing-text {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 24px;
+  color: var(--core-dark);
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.processing-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.progress-track {
+  width: 100%;
+  height: 2px;
+  background: var(--rule);
+  position: relative;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--quiet-lavender);
+  width: 0%;
+  transition: width 0.4s linear;
+  border-radius: 2px;
+}
+
+.processing-waveform {
+  width: 100%;
+  height: 80px;
+  opacity: 0.35;
+}
+
+/* ----------------------------------------------------------------------------
+   Confirmation screen
+---------------------------------------------------------------------------- */
+.delivery-date {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(32px, 4vw, 48px);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 16px 0 8px;
+  color: var(--core-dark);
+}
+
+.delivery-date em {
+  font-style: normal;
+  background: linear-gradient(180deg, transparent 62%, rgba(180, 180, 219, 0.6) 62%);
+  padding: 0 0.05em;
+}
+
+.brand-line {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 18px;
+  color: var(--ink-dim);
+  margin-top: 28px;
+  line-height: 1.5;
+}
+
+.brand-line strong { color: var(--core-dark); font-weight: 500; }
+
+/* ----------------------------------------------------------------------------
+   Toast / connection state
+---------------------------------------------------------------------------- */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--white);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  box-shadow: 0 1px 0 rgba(27, 27, 47, 0.04);
+}
+
+/* ----------------------------------------------------------------------------
+   Screen transitions
+---------------------------------------------------------------------------- */
+.fade-in {
+  animation: fade-in 0.6s ease both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* iPad-friendly: prevent zoom on tap, allow input selection */
+input { font-size: 18px; user-select: text; }
