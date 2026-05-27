@@ -288,7 +288,8 @@ input, textarea { font: inherit; color: inherit; }
   width: 100%;
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--rule-strong);
+  /* Slightly stronger underline so the field reads against the photo backdrop */
+  border-bottom: 1px solid rgba(27, 27, 47, 0.38);
   padding: 10px 0 12px;
   font-family: var(--font-display);
   font-size: 22px;
@@ -300,7 +301,11 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .field-input::placeholder {
-  color: var(--ink-faint);
+  /* Was --ink-faint (#B0B3B5) — washes out over the background photo.
+     Promoted to Grey Deep so the hint stays clearly secondary to filled
+     text but readable on the scrim + photo blend. */
+  color: var(--grey-deep);
+  opacity: 0.7;
   font-weight: 400;
 }
 
