@@ -60,7 +60,21 @@ CRON_SECRET=...long-random-string...
 DELIVERY_DELAY_DAYS=10
 EVENT_NAME="NY Tech Week"
 NEXT_PUBLIC_APP_URL=https://your-deployment.vercel.app
+OPENAI_API_KEY=sk-...   # Whisper (transcription) + GPT-4o-mini (signal extraction)
 ```
+
+## Cost note
+
+Each booth visit costs ~$0.01–0.02 in OpenAI usage:
+- Whisper-1 transcription: ~$0.006/min of audio
+- GPT-4o-mini text analysis: ~$0.001 per recording
+
+The four-signal analysis (Certainty, Tempo, Register, Ownership) runs in real
+time during the Processing screen and is stored as `signal_data` JSONB on the
+session row. See `lib/signals.ts` for the canonical framework and `lib/analyze.ts`
+for the orchestrator. Vocal register (pitch) is computed client-side in
+`lib/pitch.ts` during the recording itself — no audio leaves the browser for
+that signal.
 
 ### 4. Initialize the database
 ```powershell

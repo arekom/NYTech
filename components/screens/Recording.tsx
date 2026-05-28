@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Waveform from "@/components/Waveform";
 import Logo from "@/components/Logo";
+import { detectPitch, summarizeRegister, type PitchSample, type RegisterData } from "@/lib/pitch";
 
 const MIN_DURATION_SECONDS = 30;
 const SILENCE_PULSE_AFTER_SECONDS = 10;
+const PITCH_SAMPLE_INTERVAL_MS = 100; // ~10 Hz sampling
 
 type Props = {
   firstName: string;
-  onComplete: (blob: Blob, durationSeconds: number) => void;
+  onComplete: (blob: Blob, durationSeconds: number, register: RegisterData) => void;
 };
 
 export default function Recording({ firstName, onComplete }: Props) {
@@ -27,6 +29,8 @@ export default function Recording({ firstName, onComplete }: Props) {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const rafRef = useRef<number | null>(null);
+  const pitchSamplesRef = useRef<PitchSample[]>([]);
+  const lastPitchSampleAtRef = useRef<number>(0);
 
   // Acquire mic and start recorder
   useEffect(() => {
@@ -51,6 +55,7 @@ export default function Recording({ firstName, onComplete }: Props) {
         const mimeType = pickMimeType();
         const recorder = new MediaRecorder(s, mimeType ? { mimeType } : undefined);
         chunksRef.current = [];
+        pitchSamplesRef.current = [];
         recorder.ondataavailable = (e) => {
           if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
         };
@@ -60,34 +65,53 @@ export default function Recording({ firstName, onComplete }: Props) {
           });
           const elapsedMs = performance.now() - startedAtRef.current;
           const duration = Math.round(elapsedMs / 1000);
-          onComplete(blob, duration);
+          const register = summarizeRegister(pitchSamplesRef.current);
+          onComplete(blob, duration, register);
         };
         recorder.start(250);
         recorderRef.current = recorder;
         startedAtRef.current = performance.now();
         lastVoiceAtRef.current = performance.now();
 
-        // Silence detector (separate analyser; Waveform owns its own)
+        // Combined analyser: silence detection (freq) + pitch detection (time).
         const ctxClass =
           window.AudioContext ||
           (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
         const ctx = new ctxClass();
         const analyser = ctx.createAnalyser();
-        analyser.fftSize = 512;
+        analyser.fftSize = 2048; // larger window for autocorrelation
         const source = ctx.createMediaStreamSource(s);
         source.connect(analyser);
         audioCtxRef.current = ctx;
         analyserRef.current = analyser;
-        const buf = new Uint8Array(analyser.frequencyBinCount);
+        const freqBuf = new Uint8Array(analyser.frequencyBinCount);
+        const timeBuf = new Uint8Array(analyser.fftSize);
 
         const tick = () => {
-          analyser.getByteFrequencyData(buf);
+          // Silence gating
+          analyser.getByteFrequencyData(freqBuf);
           let sum = 0;
-          for (let i = 0; i < buf.length; i++) sum += buf[i];
-          const avg = sum / buf.length;
+          for (let i = 0; i < freqBuf.length; i++) sum += freqBuf[i];
+          const avg = sum / freqBuf.length;
           if (avg > 12) lastVoiceAtRef.current = performance.now();
           const silentForSec = (performance.now() - lastVoiceAtRef.current) / 1000;
           setSilenceHint(silentForSec > SILENCE_PULSE_AFTER_SECONDS);
+
+          // Pitch sampling — throttle to ~10 Hz so autocorrelation cost stays
+          // negligible vs the rAF loop.
+          const now = performance.now();
+          if (now - lastPitchSampleAtRef.current >= PITCH_SAMPLE_INTERVAL_MS) {
+            lastPitchSampleAtRef.current = now;
+            analyser.getByteTimeDomainData(timeBuf);
+            const hz = detectPitch(timeBuf, ctx.sampleRate);
+            if (hz !== null) {
+              pitchSamplesRef.current.push({
+                t: Math.round(now - startedAtRef.current),
+                hz,
+              });
+            }
+          }
+
           rafRef.current = requestAnimationFrame(tick);
         };
         rafRef.current = requestAnimationFrame(tick);

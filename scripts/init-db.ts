@@ -17,6 +17,8 @@ async function main() {
       audio_pathname text,
       duration_seconds integer not null,
       event_name text,
+      transcript text,
+      signal_data jsonb,
       recorded_at timestamptz not null default now(),
       deliver_at timestamptz not null,
       delivered_at timestamptz
@@ -25,6 +27,8 @@ async function main() {
 
   // Migrate existing schema if upgrading
   await sql`alter table sessions add column if not exists audio_pathname text`;
+  await sql`alter table sessions add column if not exists transcript text`;
+  await sql`alter table sessions add column if not exists signal_data jsonb`;
 
   await sql`create index if not exists sessions_deliver_at_idx on sessions (deliver_at) where delivered_at is null`;
   await sql`create index if not exists sessions_cleanup_idx on sessions (delivered_at) where audio_pathname is not null`;

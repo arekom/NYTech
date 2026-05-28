@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import type { SignalData } from "@/lib/signals";
 
 if (!process.env.RESEND_API_KEY) {
   // Don't throw at import time in case the app is starting without email yet
@@ -16,6 +17,7 @@ export type DeliveryPayload = {
   audioUrl: string;
   recordedAt: Date;
   eventName: string | null;
+  signals: SignalData | null;
 };
 
 export function deliverySubject() {
@@ -28,6 +30,7 @@ export function deliveryHtml({
   audioUrl,
   recordedAt,
   eventName,
+  signals,
 }: DeliveryPayload) {
   const dateStr = recordedAt.toLocaleDateString("en-US", {
     month: "long",
@@ -37,12 +40,9 @@ export function deliveryHtml({
   const context = eventName ? `${dateStr} — ${eventName}` : dateStr;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://spaceofmind.app";
 
+  const signalsBlock = signals ? signalsHtml(signals) : "";
+
   // Space of Mind brand palette
-  //   Core Dark      #1B1B2F (Quiet Lavender 100, primary ink)
-  //   Quiet Lavender #B4B4DB (primary accent)
-  //   Lavender Mist  #F7F7FF (background)
-  //   Calm Grey      #D8DCDE (rule color)
-  //   Grey Deep      #5F6264 (secondary ink)
   return `<!doctype html>
 <html>
   <head>
@@ -82,16 +82,17 @@ export function deliveryHtml({
             </div>
           </td></tr>
 
+          ${signalsBlock}
+
           <tr><td style="border-top:1px solid #E3E3FF;padding-top:24px;">
             <div style="font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:17px;line-height:1.5;color:#1B1B2F;">
-              You said this when you were in the middle of it.<br>
-              Listen to who you were becoming.
+              In 10 days, you&rsquo;ll meet future you to help you close the gap.
             </div>
           </td></tr>
 
           <tr><td style="padding-top:32px;">
             <a href="${appUrl}" style="display:inline-block;font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:500;font-size:14px;letter-spacing:0.02em;color:#FFFFFF;background:#1B1B2F;text-decoration:none;border-radius:999px;padding:16px 28px;">
-              Start your 90-day protocol →
+              Finish &rarr;
             </a>
           </td></tr>
 
@@ -106,19 +107,48 @@ export function deliveryHtml({
 </html>`;
 }
 
+function signalsHtml(s: SignalData): string {
+  return `
+    <tr><td style="padding:24px 0 0;">
+      <div style="font-family:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#5F6264;padding-bottom:14px;">
+        What we listened for
+      </div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+        ${signalRowHtml("Certainty", s.certainty.summary, `${s.certainty.hedge_count} hedges · ${s.certainty.certainty_count} certainty markers`)}
+        ${signalRowHtml("Tempo",     s.tempo.summary,     `${s.tempo.pause_count} pauses · ${s.tempo.speech_rate_wpm} wpm`)}
+        ${signalRowHtml("Register",  s.register.summary,  `${Math.round(s.register.avg_hz)} Hz avg · ${s.register.drop_count} drop${s.register.drop_count === 1 ? "" : "s"}, ${s.register.rise_count} rise${s.register.rise_count === 1 ? "" : "s"}`)}
+        ${signalRowHtml("Ownership", s.ownership.summary, `${s.ownership.first_person_count} first-person · ${s.ownership.passive_count} passive · ${s.ownership.third_person_count} third-person`)}
+      </table>
+    </td></tr>
+  `;
+}
+
+function signalRowHtml(label: string, body: string, footnote: string): string {
+  return `
+    <tr>
+      <td style="vertical-align:top;padding:12px 16px 12px 0;width:110px;font-family:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#5F6264;border-top:1px solid #E3E3FF;">${escapeHtml(label)}</td>
+      <td style="vertical-align:top;padding:12px 0;border-top:1px solid #E3E3FF;">
+        <div style="font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:500;font-size:16px;line-height:1.4;color:#1B1B2F;">${escapeHtml(body)}</div>
+        <div style="font-family:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;font-size:10px;letter-spacing:0.14em;color:#5F6264;padding-top:6px;">${escapeHtml(footnote)}</div>
+      </td>
+    </tr>
+  `;
+}
+
 export function deliveryText({
   firstName,
   prompt,
   audioUrl,
   recordedAt,
   eventName,
+  signals,
 }: DeliveryPayload) {
   const dateStr = recordedAt.toLocaleDateString("en-US", {
     month: "long", day: "numeric", year: "numeric",
   });
   const context = eventName ? `${dateStr} — ${eventName}` : dateStr;
-  return [
-    `Future Self Studio · ${context}`,
+  const lines: string[] = [
+    `Space of Mind · Future Self Studio · ${context}`,
     "",
     `${firstName}, she's been waiting.`,
     "",
@@ -127,14 +157,31 @@ export function deliveryText({
     "",
     `Your recording: ${audioUrl}`,
     "",
-    "You said this when you were in the middle of it.",
-    "Listen to who you were becoming.",
-    "",
-    "Ready to close the gap faster?",
-    `Start your 90-day protocol: ${process.env.NEXT_PUBLIC_APP_URL || "https://spaceofmind.app"}`,
-    "",
-    "— Space of Mind",
-  ].join("\n");
+  ];
+
+  if (signals) {
+    lines.push("What we listened for:");
+    lines.push("");
+    lines.push(`  CERTAINTY · ${signals.certainty.summary}`);
+    lines.push(`    ${signals.certainty.hedge_count} hedges · ${signals.certainty.certainty_count} certainty markers`);
+    lines.push("");
+    lines.push(`  TEMPO · ${signals.tempo.summary}`);
+    lines.push(`    ${signals.tempo.pause_count} pauses · ${signals.tempo.speech_rate_wpm} wpm`);
+    lines.push("");
+    lines.push(`  REGISTER · ${signals.register.summary}`);
+    lines.push(`    ${Math.round(signals.register.avg_hz)} Hz avg · ${signals.register.drop_count} drops, ${signals.register.rise_count} rises`);
+    lines.push("");
+    lines.push(`  OWNERSHIP · ${signals.ownership.summary}`);
+    lines.push(`    ${signals.ownership.first_person_count} first-person · ${signals.ownership.passive_count} passive · ${signals.ownership.third_person_count} third-person`);
+    lines.push("");
+  }
+
+  lines.push("In 10 days, you'll meet future you to help you close the gap.");
+  lines.push("");
+  lines.push(`Finish → ${process.env.NEXT_PUBLIC_APP_URL || "https://spaceofmind.app"}`);
+  lines.push("");
+  lines.push("— Space of Mind");
+  return lines.join("\n");
 }
 
 function escapeHtml(s: string) {

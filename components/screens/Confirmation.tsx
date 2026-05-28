@@ -1,14 +1,16 @@
 "use client";
 
 import Logo from "@/components/Logo";
+import type { SignalData } from "@/lib/signals";
 
 type Props = {
   firstName: string;
   deliverAt: Date;
+  signals: SignalData | null;
   onDone: () => void;
 };
 
-export default function Confirmation({ firstName, deliverAt, onDone }: Props) {
+export default function Confirmation({ firstName, deliverAt, signals, onDone }: Props) {
   const dateLabel = formatDeliveryDate(deliverAt);
 
   return (
@@ -21,18 +23,30 @@ export default function Confirmation({ firstName, deliverAt, onDone }: Props) {
       </header>
 
       <div className="stage-body">
-        <span className="eyebrow">Your message has been saved</span>
+        <span className="eyebrow">Here&rsquo;s what we heard</span>
         <hr className="rule" />
 
-        <h1 className="headline">
-          {firstName}, your future self<br />
-          will receive this on<br />
+        {signals ? (
+          <ul className="signal-readout" aria-label="Signal readout">
+            <SignalLine label="Certainty" body={signals.certainty.summary} />
+            <SignalLine label="Tempo"     body={signals.tempo.summary} />
+            <SignalLine label="Register"  body={signals.register.summary} />
+            <SignalLine label="Ownership" body={signals.ownership.summary} />
+          </ul>
+        ) : (
+          <p className="subtext">
+            We held your take. The full readout will arrive with your email.
+          </p>
+        )}
+
+        <hr className="rule" style={{ marginTop: 32 }} />
+
+        <p className="delivery-label">
+          {firstName}, your future self will receive this on
+        </p>
+        <p className="delivery-date">
           <em>{dateLabel}</em>
-        </h1>
-
-        <p className="subtext">Check your inbox then.</p>
-
-        <hr className="rule" style={{ marginTop: 40 }} />
+        </p>
 
         <p className="brand-line">
           <strong>She&rsquo;s already there.</strong> You&rsquo;re on your way.
@@ -50,6 +64,15 @@ export default function Confirmation({ firstName, deliverAt, onDone }: Props) {
         <span>Delivery {dateLabel}</span>
       </footer>
     </section>
+  );
+}
+
+function SignalLine({ label, body }: { label: string; body: string }) {
+  return (
+    <li className="signal-line">
+      <span className="signal-label">{label}</span>
+      <span className="signal-body">{body}</span>
+    </li>
   );
 }
 

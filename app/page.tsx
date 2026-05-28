@@ -7,6 +7,8 @@ import Prompt from "@/components/screens/Prompt";
 import Recording from "@/components/screens/Recording";
 import Processing from "@/components/screens/Processing";
 import Confirmation from "@/components/screens/Confirmation";
+import type { RegisterData } from "@/lib/pitch";
+import type { SignalData } from "@/lib/signals";
 
 export type Screen =
   | "welcome"
@@ -22,6 +24,10 @@ export type SessionState = {
   focus: string;
   audioBlob: Blob | null;
   durationSeconds: number;
+  /** Client-captured pitch samples + summary, computed during recording. */
+  register: RegisterData | null;
+  /** Full four-signal analysis result, populated after Processing succeeds. */
+  signals: SignalData | null;
   deliverAt: Date | null;
 };
 
@@ -31,6 +37,8 @@ const EMPTY: SessionState = {
   focus: "",
   audioBlob: null,
   durationSeconds: 0,
+  register: null,
+  signals: null,
   deliverAt: null,
 };
 
@@ -65,8 +73,8 @@ export default function Page() {
       {screen === "recording" && (
         <Recording
           firstName={session.firstName}
-          onComplete={(blob, duration) => {
-            update({ audioBlob: blob, durationSeconds: duration });
+          onComplete={(blob, duration, register) => {
+            update({ audioBlob: blob, durationSeconds: duration, register });
             setScreen("processing");
           }}
         />
@@ -74,8 +82,8 @@ export default function Page() {
       {screen === "processing" && (
         <Processing
           session={session}
-          onComplete={(deliverAt) => {
-            update({ deliverAt });
+          onComplete={(deliverAt, signals) => {
+            update({ deliverAt, signals });
             setScreen("confirmation");
           }}
           onError={() => {
@@ -87,6 +95,7 @@ export default function Page() {
         <Confirmation
           firstName={session.firstName}
           deliverAt={session.deliverAt}
+          signals={session.signals}
           onDone={reset}
         />
       )}

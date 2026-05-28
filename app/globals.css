@@ -573,6 +573,22 @@ input, textarea { font: inherit; color: inherit; }
   border-radius: 2px;
 }
 
+/* Indeterminate sliding bar — used while a stage is waiting on real
+   computation (Whisper / GPT) that can't expose a percentage. */
+.stage-meter-indeterminate {
+  display: block;
+  height: 100%;
+  width: 38%;
+  background: var(--quiet-lavender);
+  border-radius: 2px;
+  animation: stage-meter-slide 1.6s ease-in-out infinite;
+}
+
+@keyframes stage-meter-slide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(280%); }
+}
+
 @keyframes stage-pulse {
   0%, 100% { transform: scale(1); opacity: 1; }
   50%      { transform: scale(0.65); opacity: 0.5; }
@@ -625,6 +641,54 @@ input, textarea { font: inherit; color: inherit; }
 /* ----------------------------------------------------------------------------
    Confirmation screen
 ---------------------------------------------------------------------------- */
+.signal-readout {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 580px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.signal-line {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  column-gap: 20px;
+  padding: 14px 0;
+  border-top: 1px solid var(--rule);
+  align-items: start;
+}
+
+.signal-line:first-child { border-top: none; }
+
+.signal-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  padding-top: 4px;
+}
+
+.signal-body {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 17px;
+  color: var(--core-dark);
+  letter-spacing: -0.005em;
+  line-height: 1.4;
+}
+
+.delivery-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin-top: 16px;
+}
+
 .delivery-date {
   font-family: var(--font-display);
   font-weight: 500;

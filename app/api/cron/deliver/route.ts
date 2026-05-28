@@ -72,6 +72,7 @@ export async function GET(req: Request) {
         audioUrl: presignedUrl,
         recordedAt: new Date(row.recorded_at),
         eventName: row.event_name,
+        signals: row.signal_data,
       });
       const text = deliveryText({
         to: row.email,
@@ -80,6 +81,7 @@ export async function GET(req: Request) {
         audioUrl: presignedUrl,
         recordedAt: new Date(row.recorded_at),
         eventName: row.event_name,
+        signals: row.signal_data,
       });
 
       const send = await resend.emails.send({
