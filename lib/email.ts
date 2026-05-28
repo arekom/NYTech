@@ -75,11 +75,6 @@ export function deliveryHtml({
 
           <tr><td style="padding:24px 0;">
             <audio controls src="${audioUrl}" style="width:100%;"></audio>
-            <div style="padding-top:14px;">
-              <a href="${audioUrl}" style="font-family:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:#1B1B2F;text-decoration:none;border-bottom:1px solid #B4B4DB;padding-bottom:4px;">
-                Download recording →
-              </a>
-            </div>
           </td></tr>
 
           ${signalsBlock}
