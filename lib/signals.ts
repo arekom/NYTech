@@ -62,6 +62,10 @@ export type OwnershipSignal = {
   passive_count: number;
   third_person_count: number;
   agency_ratio: number;
+  /** first_person_count / word_count, 0..1 — the mockup's SELF-FOCUS gauge.
+   *  Average baseline ≈ 0.15; values >0.2 read as high self-focus. Computed
+   *  in the analyze route after Whisper returns word count. */
+  self_focus_ratio: number;
   examples: { first_person: string[]; passive: string[]; third_person: string[] };
   verbatim_quote?: string;
   summary: string;
@@ -302,7 +306,7 @@ export type SentimentCategory =
   | "very_positive";
 
 export type SentimentAnalysis = {
-  /** 0–100, higher = more positive */
+  /** 0–100, higher = more positive. LLM-derived; non-deterministic. */
   overall_score: number;
   category: SentimentCategory;
   dominant_emotion: string;
@@ -320,6 +324,89 @@ export type SentimentAnalysis = {
   confidence: number;
   /** ONE brand-voice sentence translating the score into an insight */
   summary: string;
+
+  /**
+   * Deterministic AFINN-165 lookup score on the transcript, 0–100. Cross-
+   * checks the LLM `overall_score`. Large divergence (>20) flags low
+   * confidence — the LLM read may have drifted. See `lib/sentiment-empirical.ts`.
+   */
+  empirical_score: number;
+  /** Number of AFINN-scored words found in the transcript (sample-size proxy) */
+  empirical_hits: number;
+};
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Brain map (TRIBE v2 cortical activation)
+   Research / internal demo only — TRIBE v2 is CC BY-NC.
+   ───────────────────────────────────────────────────────────────────────── */
+
+export type CorticalRegion = {
+  /** Canonical slug from label_library.yaml (e.g. "DMN_CORE") */
+  id: string;
+  scientific_name: string;
+  anatomical_descriptor: string;
+  yeo_network: string;
+  short_function: string;
+  function_summary: string;
+  /** Mean |activation| over the region's vertices */
+  score: number;
+};
+
+/**
+ * Per-region attribution produced by the synthesis pass — what the speaker
+ * SAID that activated this region, paired with a plain-English interpretation
+ * of what it hints about them. Mirrors the mockup's "Top 3 brain regions"
+ * card layout.
+ */
+export type RegionAttribution = {
+  region_id: string;             // matches CorticalRegion.id
+  /** "WHAT YOU SAID THAT ACTIVATED IT" — 1-sentence + verbatim user quote */
+  activated_by: string;
+  verbatim_quote: string;
+  /** "WHAT THIS HINTS ABOUT YOU" — 1-sentence brand-voice interpretation */
+  hints: string;
+};
+
+export type BrainMap = {
+  /** Vercel Blob URL to the brand-styled peak-frame PNG (Phase 1) */
+  image_url: string;
+  /** Phase 2: Vercel Blob URL to synced MP4. Null until brain video ships. */
+  video_url: string | null;
+  /** Top regions by activation, descending */
+  top_regions: CorticalRegion[];
+  /** Yeo network most common among the top regions */
+  dominant_yeo_network: string | null;
+  /** Index of the peak timestep in the TRIBE (T, V) output — provenance */
+  peak_timestep: number;
+};
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Synthesis — the 5-finding hero panel
+   New layer on top of the extracted data. Produced by a second GPT call
+   that takes the full extraction + brain regions + transcript and writes
+   plain-English findings that interleave linguistic and brain evidence.
+   ───────────────────────────────────────────────────────────────────────── */
+
+export type SynthesisFinding = {
+  /** Bold one-line headline (e.g. "You measure yourself against an internal audience.") */
+  headline: string;
+  /**
+   * Supporting paragraph that combines:
+   *   - a verbatim linguistic finding (a quote or a count)
+   *   - a brain region observation (what fired)
+   *   - a plain-English interpretation
+   * 1–3 sentences. Address the speaker as "you". No clinical jargon.
+   */
+  body: string;
+};
+
+export type Synthesis = {
+  /** Up to 5 findings, ordered strongest-evidence first */
+  findings: SynthesisFinding[];
+  /** Brief intro shown above the findings on the Confirmation hero panel */
+  intro: string;
+  /** Per-region linguistic-to-brain attribution for the "Top regions" cards */
+  region_attributions: RegionAttribution[];
 };
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -332,6 +419,25 @@ export type EmergingPattern = {
   significance: number;
   /** ONE brand-voice sentence — what to do about it */
   recommendation: string;
+};
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Linguistic tags (themes, repeated phrases, peak emotional phrase)
+   Adopted from the sshandhra1/self-talk-mirror reference repo.
+   ───────────────────────────────────────────────────────────────────────── */
+
+export type RepeatedPhrase = {
+  phrase: string;
+  count: number;
+};
+
+export type LinguisticTags = {
+  /** 3–5 short topic tags, each ≤3 words */
+  themes: string[];
+  /** Phrases the speaker repeated verbatim 2+ times, sorted by count desc */
+  repeated_phrases: RepeatedPhrase[];
+  /** Single most emotionally loaded verbatim phrase (≤15 words) */
+  peak_emotional_phrase: string;
 };
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -351,10 +457,22 @@ export type SignalData = {
 
   // Thought layer (what they said)
   future_vision: FutureVision;
+  linguistic: LinguisticTags;
   limiting_beliefs: LimitingBelief[];
   thinking_patterns: ThinkingPattern[];
   sentiment: SentimentAnalysis;
   emerging_patterns: EmergingPattern[];
+
+  // Brain layer (cortical activation map from TRIBE v2). Optional — render
+  // may fail or be disabled (e.g. BRAIN_SERVICE_URL unset) and the rest of
+  // the analysis is still valid without it.
+  brain_map?: BrainMap | null;
+
+  // Synthesis layer — the 5-finding hero panel that unifies everything.
+  // Computed by a second GPT call after extraction + brain render finish,
+  // so it has full context. Optional — if the synthesis call fails, the
+  // booth still renders all the underlying data.
+  synthesis?: Synthesis | null;
 };
 
 /* ─────────────────────────────────────────────────────────────────────────

@@ -1,0 +1,52 @@
+description: >
+  Heavy passive constructions + externalized blame. Tests ownership /
+  agency detection: passive_count should be high relative to
+  first_person_count, victimhood-mentality should fire.
+
+expected:
+  themes:
+    - blame
+    - powerlessness
+
+  limiting_beliefs:
+    - victimhood-mentality
+  not_limiting_beliefs:
+    - hyper-independence
+    - perfectionism
+    - impostor-syndrome
+    - entitlement
+
+  thinking_patterns:
+    - personalization-blame
+  not_thinking_patterns:
+    - self-compassion
+    - growth-mindset
+    - value-aligned
+    - acceptance
+
+  # Ownership: this is where the test really pivots. Passive count should
+  # rival or exceed first-person count.
+  hedge_count:
+    value: 2
+    tolerance: 3
+  certainty_count:
+    value: 1
+    tolerance: 2
+
+  # Self-focus ratio: speaker DOES use "I" a fair amount ("I ended up", "I
+  # was working with") but ALSO heavy passive. Expect mid-range, not high.
+  self_focus_ratio:
+    value: 0.15
+    tolerance: 0.07
+
+  sentiment_score:
+    value: 30
+    tolerance: 12
+  sentiment_category: negative
+
+  dominant_emotion_oneof:
+    - resentment
+    - frustration
+    - helplessness
+    - bitterness
+    - defeat

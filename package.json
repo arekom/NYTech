@@ -7,10 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:init": "node --env-file=.env.local --import tsx scripts/init-db.ts"
+    "db:init": "node --env-file=.env.local --import tsx scripts/init-db.ts",
+    "evals": "node --env-file=.env.local --import tsx evals/run-evals.ts"
   },
   "dependencies": {
     "@vercel/blob": "^2.4.0",
+    "afinn-165": "^2.0.2",
     "next": "^15.0.3",
     "openai": "^6.39.0",
     "postgres": "^3.4.5",
@@ -19,9 +21,11 @@
     "resend": "^4.0.1"
   },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.9.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "js-yaml": "^4.2.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }

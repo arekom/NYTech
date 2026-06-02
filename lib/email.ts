@@ -103,13 +103,93 @@ export function deliveryHtml({
 </html>`;
 }
 
+function synthesisHtml(s: SignalData): string {
+  if (!s.synthesis || s.synthesis.findings.length === 0) return "";
+  const intro = s.synthesis.intro || "";
+  const findings = s.synthesis.findings
+    .map(
+      (f, i) => `
+      <tr><td style="padding:18px 0;border-top:1px solid #E3E3FF;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="vertical-align:top;width:32px;font-family:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;font-size:12px;color:#5F6264;padding-top:2px;">${i + 1}.</td>
+            <td style="vertical-align:top;">
+              <div style="font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:500;font-size:17px;line-height:1.35;letter-spacing:-0.005em;color:#1B1B2F;">${escapeHtml(f.headline)}</div>
+              <div style="font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.55;color:#5F6264;padding-top:6px;">${escapeHtml(f.body)}</div>
+            </td>
+          </tr>
+        </table>
+      </td></tr>`
+    )
+    .join("");
+
+  return `
+    <tr><td style="padding:24px 0 0;">
+      ${sectionLabel("Your Result")}
+      <div style="font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:500;font-size:22px;line-height:1.25;letter-spacing:-0.01em;color:#1B1B2F;padding-top:10px;">
+        What this says about your beliefs &amp; habits
+      </div>
+      <div style="font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.55;color:#5F6264;padding-top:8px;padding-bottom:10px;">
+        ${escapeHtml(intro)}
+      </div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+        ${findings}
+      </table>
+    </td></tr>
+  `;
+}
+
 function signalsHtml(s: SignalData): string {
+  const peakBlock = s.linguistic.peak_emotional_phrase
+    ? `
+    <tr><td style="padding:24px 0 0;">
+      <div style="font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-style:italic;font-weight:400;font-size:22px;line-height:1.35;letter-spacing:-0.005em;color:#1B1B2F;text-align:center;">
+        &ldquo;${escapeHtml(s.linguistic.peak_emotional_phrase)}&rdquo;
+      </div>
+    </td></tr>
+  `
+    : "";
+
+  const themesBlock = s.linguistic.themes.length
+    ? `
+    <tr><td style="padding:16px 0 0;text-align:center;">
+      ${s.linguistic.themes
+        .map(
+          (t) =>
+            `<span style="display:inline-block;font-family:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#1B1B2F;background:#F0F0FF;border:1px solid rgba(27,27,47,0.12);border-radius:999px;padding:5px 10px;margin:3px 3px;">${escapeHtml(t)}</span>`
+        )
+        .join("")}
+    </td></tr>
+  `
+    : "";
+
   const visionBlock = s.future_vision.summary
     ? `
     <tr><td style="padding:24px 0 0;">
       ${sectionLabel("What you said is coming")}
       <div style="font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:500;font-size:19px;line-height:1.45;letter-spacing:-0.005em;color:#1B1B2F;padding-top:10px;">
         ${escapeHtml(s.future_vision.summary)}
+      </div>
+    </td></tr>
+  `
+    : "";
+
+  const brainBlock = s.brain_map
+    ? `
+    <tr><td style="padding:28px 0 0;">
+      ${sectionLabel("Where the patterns lit up")}
+      <img src="${s.brain_map.image_url}" alt="Cortical activation map" style="display:block;width:100%;height:auto;margin-top:10px;border-radius:16px;border:1px solid #E3E3FF;background:#F7F7FF;" />
+      <div style="margin-top:14px;font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.55;color:#5F6264;">
+        ${s.brain_map.top_regions
+          .slice(0, 4)
+          .map(
+            (r) =>
+              `<div style="padding:4px 0;"><span style="font-weight:500;color:#1B1B2F;">${escapeHtml(r.scientific_name)}</span> &middot; <span style="font-style:italic;">${escapeHtml(r.short_function)}</span></div>`
+          )
+          .join("")}
+      </div>
+      <div style="margin-top:8px;font-family:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;font-size:9px;letter-spacing:0.16em;color:#5F6264;">
+        TRIBE v2 cortical prediction &middot; research use only
       </div>
     </td></tr>
   `
@@ -166,6 +246,25 @@ function signalsHtml(s: SignalData): string {
   `
     : "";
 
+  const repeatedBlock = s.linguistic.repeated_phrases.length
+    ? `
+    <tr><td style="padding:28px 0 0;">
+      ${sectionLabel("Phrases you came back to")}
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;padding-top:6px;">
+        ${s.linguistic.repeated_phrases
+          .map(
+            (r) => `
+          <tr>
+            <td style="vertical-align:top;padding:10px 0;border-top:1px solid #E3E3FF;font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-style:italic;font-size:14px;line-height:1.4;color:#1B1B2F;">&ldquo;${escapeHtml(r.phrase)}&rdquo;</td>
+            <td style="vertical-align:top;padding:10px 0;border-top:1px solid #E3E3FF;width:80px;text-align:right;font-family:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;font-size:10px;letter-spacing:0.14em;color:#5F6264;">×${r.count}</td>
+          </tr>`
+          )
+          .join("")}
+      </table>
+    </td></tr>
+  `
+    : "";
+
   const sentimentBlock = `
     <tr><td style="padding:28px 0 0;">
       ${sectionLabel("Where you're at")}
@@ -179,7 +278,11 @@ function signalsHtml(s: SignalData): string {
   `;
 
   return `
+    ${synthesisHtml(s)}
+    ${peakBlock}
+    ${themesBlock}
     ${visionBlock}
+    ${brainBlock}
     <tr><td style="padding:28px 0 0;">
       ${sectionLabel("What we listened for")}
       <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;padding-top:6px;">
@@ -192,6 +295,7 @@ function signalsHtml(s: SignalData): string {
     ${beliefsBlock}
     ${unhelpfulBlock}
     ${helpfulBlock}
+    ${repeatedBlock}
     ${sentimentBlock}
   `;
 }
@@ -251,9 +355,42 @@ export function deliveryText({
   ];
 
   if (signals) {
+    if (signals.synthesis && signals.synthesis.findings.length) {
+      lines.push("YOUR RESULT — What this says about your beliefs & habits");
+      lines.push("");
+      if (signals.synthesis.intro) {
+        lines.push(signals.synthesis.intro);
+        lines.push("");
+      }
+      signals.synthesis.findings.forEach((f, i) => {
+        lines.push(`${i + 1}. ${f.headline}`);
+        lines.push(`   ${f.body}`);
+        lines.push("");
+      });
+    }
+
+    if (signals.linguistic.peak_emotional_phrase) {
+      lines.push(`"${signals.linguistic.peak_emotional_phrase}"`);
+      lines.push("");
+    }
+
+    if (signals.linguistic.themes.length) {
+      lines.push(`Themes: ${signals.linguistic.themes.join(" · ")}`);
+      lines.push("");
+    }
+
     if (signals.future_vision.summary) {
       lines.push("What you said is coming:");
       lines.push(`  ${signals.future_vision.summary}`);
+      lines.push("");
+    }
+
+    if (signals.brain_map && signals.brain_map.top_regions.length) {
+      lines.push("Where the patterns lit up (TRIBE v2 cortical prediction):");
+      for (const r of signals.brain_map.top_regions.slice(0, 4)) {
+        lines.push(`  ${r.scientific_name} · ${r.short_function}`);
+      }
+      lines.push(`  Image: ${signals.brain_map.image_url}`);
       lines.push("");
     }
 
@@ -302,6 +439,15 @@ export function deliveryText({
         lines.push(`    ${p.interpretation}`);
         lines.push("");
       }
+    }
+
+    if (signals.linguistic.repeated_phrases.length) {
+      lines.push("Phrases you came back to:");
+      lines.push("");
+      for (const r of signals.linguistic.repeated_phrases) {
+        lines.push(`  "${r.phrase}" ×${r.count}`);
+      }
+      lines.push("");
     }
 
     lines.push("Where you're at:");

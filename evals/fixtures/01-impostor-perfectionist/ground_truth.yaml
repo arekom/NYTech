@@ -1,0 +1,60 @@
+description: >
+  Heavy impostor-syndrome + perfectionism script. Should fire on hedging,
+  disqualifying-positive, should-statements, comparing-and-despairing, and
+  high self-focus. Verbatim phrases include "anyone could have done that"
+  and "I should be further along".
+
+expected:
+  themes:
+    # We expect at least these concepts as theme tags. Fuzzy match — "self-doubt"
+    # also matches "self doubt", "doubt", "self criticism", etc.
+    - impostor
+    - self-doubt
+    - comparison
+
+  repeated_phrases:
+    - "I think"
+    - "I should"
+
+  peak_emotional_phrase: "bluffing my way through it"
+
+  limiting_beliefs:
+    - impostor-syndrome
+    - perfectionism
+
+  not_limiting_beliefs:
+    - entitlement
+    - victimhood-mentality
+    - control-issues
+
+  thinking_patterns:
+    - should-statements
+    - disqualifying-positive
+    - comparing-and-despairing
+
+  not_thinking_patterns:
+    - acceptance
+    - gratitude
+
+  hedge_count:
+    value: 9
+    tolerance: 4
+  certainty_count:
+    value: 1
+    tolerance: 2
+
+  self_focus_ratio:
+    value: 0.24
+    tolerance: 0.08
+
+  sentiment_score:
+    value: 30
+    tolerance: 12
+  sentiment_category: negative
+
+  dominant_emotion_oneof:
+    - shame
+    - doubt
+    - anxiety
+    - inadequacy
+    - frustration

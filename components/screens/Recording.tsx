@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Waveform from "@/components/Waveform";
 import Logo from "@/components/Logo";
 import { detectPitch, summarizeRegister, type PitchSample, type RegisterData } from "@/lib/pitch";
+import type { BoothQuestion } from "@/lib/prompts";
+import { TOTAL_QUESTIONS } from "@/lib/prompts";
 
 const MIN_DURATION_SECONDS = 30;
 const SILENCE_PULSE_AFTER_SECONDS = 10;
@@ -11,10 +13,11 @@ const PITCH_SAMPLE_INTERVAL_MS = 100; // ~10 Hz sampling
 
 type Props = {
   firstName: string;
+  question: BoothQuestion;
   onComplete: (blob: Blob, durationSeconds: number, register: RegisterData) => void;
 };
 
-export default function Recording({ firstName, onComplete }: Props) {
+export default function Recording({ firstName, question, onComplete }: Props) {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -183,10 +186,12 @@ export default function Recording({ firstName, onComplete }: Props) {
       <header className="stage-header recording-meta">
         <span>
           <span className="dot" />
-          Recording for {firstName}
+          {firstName} · Question {question.index} of {TOTAL_QUESTIONS}
         </span>
         <span className="timer">{formatTimer(seconds)}</span>
       </header>
+
+      <p className="recording-question">{question.text}</p>
 
       <div className="waveform-container">
         <Waveform stream={stream} active={true} />

@@ -1,0 +1,51 @@
+description: >
+  Growth-mindset, evidence-based, self-compassionate script. False-positive
+  guard for impostor / perfectionism / catastrophizing detection. Helpful
+  patterns should dominate.
+
+expected:
+  themes:
+    - growth
+    - building
+    - alignment
+
+  limiting_beliefs: []
+  not_limiting_beliefs:
+    - impostor-syndrome
+    - perfectionism
+    - fear-of-failure
+    - catastrophic-health-anxiety
+    - victimhood-mentality
+
+  thinking_patterns:
+    - growth-mindset
+    - evidence-based
+  not_thinking_patterns:
+    - catastrophizing
+    - should-statements
+    - disqualifying-positive
+    - mind-reading
+
+  hedge_count:
+    value: 2
+    tolerance: 3
+  certainty_count:
+    value: 6
+    tolerance: 3
+
+  self_focus_ratio:
+    value: 0.18
+    tolerance: 0.08
+
+  sentiment_score:
+    value: 70
+    tolerance: 15
+  sentiment_category: positive
+
+  dominant_emotion_oneof:
+    - hope
+    - confidence
+    - calm
+    - resolve
+    - determination
+    - optimism

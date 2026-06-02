@@ -61,6 +61,12 @@ DELIVERY_DELAY_DAYS=10
 EVENT_NAME="NY Tech Week"
 NEXT_PUBLIC_APP_URL=https://your-deployment.vercel.app
 OPENAI_API_KEY=sk-...   # Whisper (transcription) + GPT-4o-mini (signal extraction)
+
+# Brain map (TRIBE v2 on Railway). Optional — pipeline degrades
+# gracefully if either is unset.
+# Research / non-commercial use only. See brain-service/README.md.
+BRAIN_SERVICE_URL=https://your-brain-service.up.railway.app
+BRAIN_SERVICE_TOKEN=...same-value-as-SERVICE_AUTH_TOKEN-on-railway...
 ```
 
 ## Cost note
@@ -75,6 +81,15 @@ session row. See `lib/signals.ts` for the canonical framework and `lib/analyze.t
 for the orchestrator. Vocal register (pitch) is computed client-side in
 `lib/pitch.ts` during the recording itself — no audio leaves the browser for
 that signal.
+
+## Brain map (research only)
+
+A separate Python sidecar in [`brain-service/`](brain-service/) runs Meta's
+TRIBE v2 model on Railway, returning a brand-styled cortical activation map
+that surfaces on the Confirmation screen and in the delivery email. **CC
+BY-NC license — research / internal demos only, not commercial product use.**
+See [brain-service/README.md](brain-service/README.md) for full deployment
+instructions (HuggingFace access, Railway volume mount, CPU/GPU swap).
 
 ### 4. Initialize the database
 ```powershell

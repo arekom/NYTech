@@ -57,3 +57,9 @@ pnpm-debug.log*
 
 # Claude / agent caches
 .claude/
+
+# Local-only scratch for mockup / external assets
+.miro-tmp/
+
+# Brain-service
+brain-service/

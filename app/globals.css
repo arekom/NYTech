@@ -337,8 +337,79 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /* ----------------------------------------------------------------------------
+   Multi-question flow (Prompt overview + BetweenQuestions transition)
+---------------------------------------------------------------------------- */
+.question-preview {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 640px;
+  margin: 32px auto 0;
+  text-align: left;
+}
+
+.question-preview-row {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  column-gap: 16px;
+  align-items: start;
+  padding: 12px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.question-preview-row:first-child { border-top: none; }
+
+.question-preview-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--ink-dim);
+  padding-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.question-preview-text {
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--core-dark);
+  letter-spacing: -0.005em;
+}
+
+.between-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin: 24px 0 0;
+}
+
+.between-autoadvance {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 18px;
+}
+
+/* ----------------------------------------------------------------------------
    Recording screen
 ---------------------------------------------------------------------------- */
+.recording-question {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(20px, 2.4vw, 26px);
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--core-dark);
+  text-align: center;
+  max-width: 38ch;
+  margin: 16px auto 8px;
+}
 .recording-stage {
   width: 100%;
   height: 100%;
@@ -667,6 +738,104 @@ input, textarea { font: inherit; color: inherit; }
   margin: 0;
 }
 
+/* Brain map — TRIBE v2 cortical activation rendered with brand palette.
+   Sits between future-vision and the signal grid as a featured artifact. */
+.brain-figure {
+  width: 100%;
+  max-width: 580px;
+  margin: 28px auto 0;
+  text-align: left;
+}
+
+.brain-figure .signal-label {
+  display: block;
+  padding-top: 0;
+  padding-bottom: 12px;
+}
+
+.brain-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+  background: var(--lavender-mist);
+  border: 1px solid var(--rule);
+}
+
+.brain-caption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 14px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--ink-dim);
+  line-height: 1.5;
+}
+
+.brain-region {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.brain-region-name {
+  font-weight: 500;
+  color: var(--core-dark);
+}
+
+.brain-region-fn {
+  font-style: italic;
+}
+
+.brain-region-sep {
+  color: var(--ink-faint);
+  margin-left: 6px;
+}
+
+/* Peak emotional phrase — the single most loaded verbatim from the take.
+   Sits at the very top of the readout (right under the eyebrow) as a hero
+   moment. Italic, larger, in Core Dark with Quiet Lavender highlight on
+   the quote marks to lift the line off the background. */
+.peak-phrase {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-style: italic;
+  font-size: clamp(22px, 2.6vw, 28px);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--core-dark);
+  max-width: 580px;
+  margin: 8px auto 24px;
+  text-align: center;
+}
+
+/* Theme chips — 3–5 short topic tags. Soft Lavender Haze pill background
+   so they read as labels, not buttons. Single line, wraps on overflow. */
+.theme-chips {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: 580px;
+  margin: 0 auto 28px;
+  padding: 0;
+}
+
+.theme-chip {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--core-dark);
+  background: var(--lavender-haze);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+
 /* "Belief running underneath" — sits between the four signals and the
    patterns list. One block, the strongest detected belief cluster only. */
 .belief-block {
@@ -809,6 +978,463 @@ input, textarea { font: inherit; color: inherit; }
   max-width: 580px;
   margin: 0 auto;
   text-align: left;
+}
+
+/* ----------------------------------------------------------------------------
+   Output page (Confirmation, post-recording)
+   Adapted from the Miro mockup; light theme on Lavender Mist instead of
+   the mockup's dark background. Section structure preserved.
+---------------------------------------------------------------------------- */
+
+/* The output page is taller than a single viewport — let it scroll. */
+.stage-output {
+  overflow-y: auto;
+}
+
+.stage-output .stage-body {
+  height: auto;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: left;
+  padding: 24px 0 48px;
+}
+
+.output-body > section {
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto 32px;
+}
+
+.result-eyebrow {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin-bottom: 8px;
+}
+
+/* ── 1. Hero — the 5-finding panel ─────────────────────────────────── */
+.result-hero {
+  background: var(--white);
+  border: 1px solid var(--rule);
+  border-radius: 20px;
+  padding: 36px 36px 32px;
+  box-shadow: 0 1px 0 rgba(27, 27, 47, 0.04);
+}
+
+.result-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(26px, 3.2vw, 38px);
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: var(--core-dark);
+  margin: 0 0 12px;
+  max-width: 22ch;
+}
+
+.result-intro {
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--ink-dim);
+  line-height: 1.55;
+  max-width: 56ch;
+  margin: 0 0 24px;
+}
+
+.result-findings {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.result-finding {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  column-gap: 16px;
+  padding: 18px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.result-finding:first-child { border-top: none; padding-top: 4px; }
+
+.result-finding-num {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+  padding-top: 2px;
+}
+
+.result-finding-headline {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 18px;
+  line-height: 1.3;
+  letter-spacing: -0.005em;
+  color: var(--core-dark);
+  margin: 0 0 6px;
+}
+
+.result-finding-body {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-dim);
+  margin: 0;
+}
+
+/* ── 2. Media row — audio + brain ──────────────────────────────────── */
+.media-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.media-row > div {
+  background: var(--white);
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.media-brain-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  background: var(--lavender-mist);
+  margin-top: 12px;
+}
+
+.media-brain-foot {
+  margin: 10px 0 0;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Audio player */
+.audio-player {
+  margin-top: 12px;
+}
+
+.audio-player-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.audio-play-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: var(--core-dark);
+  color: var(--white);
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.audio-play-btn:hover { background: var(--quiet-lavender); color: var(--core-dark); }
+.audio-play-btn.playing { background: var(--quiet-lavender); color: var(--core-dark); }
+
+.audio-scrubber {
+  flex: 1;
+  height: 6px;
+  background: var(--rule);
+  border-radius: 999px;
+  position: relative;
+  cursor: pointer;
+}
+
+.audio-scrubber-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--quiet-lavender);
+  border-radius: 999px;
+  width: 0%;
+}
+
+.audio-scrubber-pin {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--core-dark);
+  border: 2px solid var(--white);
+}
+
+.audio-take-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.audio-take-tab {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  background: var(--lavender-mist);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.audio-take-tab:hover { background: var(--lavender-haze); color: var(--core-dark); }
+.audio-take-tab.active {
+  background: var(--core-dark);
+  color: var(--white);
+  border-color: var(--core-dark);
+}
+
+/* ── 3. Reasoning intro ────────────────────────────────────────────── */
+.reasoning-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 22px;
+  line-height: 1.3;
+  color: var(--core-dark);
+  margin: 0 0 8px;
+}
+
+.reasoning-body {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-dim);
+  margin: 0;
+  max-width: 70ch;
+}
+
+/* ── 4. What your words said ───────────────────────────────────────── */
+.words-panel {
+  background: var(--white);
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.words-themes {
+  margin-top: 14px;
+}
+
+.words-themes .theme-chips {
+  margin: 8px 0 0;
+  justify-content: flex-start;
+}
+
+.words-gauges {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.gauge { display: flex; flex-direction: column; }
+
+.gauge-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin-bottom: 10px;
+}
+
+.gauge-scale {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: lowercase;
+  color: var(--ink-faint);
+  margin-bottom: 6px;
+}
+
+.gauge-track {
+  position: relative;
+  height: 8px;
+  background: var(--rule);
+  border-radius: 999px;
+}
+
+.gauge-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, var(--quiet-lavender), var(--quiet-meadow));
+  border-radius: 999px;
+  width: 0%;
+}
+
+.gauge-pin {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--core-dark);
+  border: 2px solid var(--white);
+}
+
+.gauge-caption {
+  margin: 10px 0 0;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-dim);
+  line-height: 1.5;
+}
+
+.words-patterns {
+  margin-top: 24px;
+}
+
+.pattern-cards {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.pattern-card {
+  background: var(--lavender-haze);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--quiet-lavender);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.pattern-card-title {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--core-dark);
+}
+
+.pattern-card-quote {
+  margin: 6px 0 0;
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-dim);
+  line-height: 1.5;
+}
+
+.pattern-card-quote em { font-style: normal; font-weight: 500; color: var(--ink-dim); }
+
+/* ── 5. Top brain regions ──────────────────────────────────────────── */
+.region-cards {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.region-card {
+  background: var(--white);
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.region-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.region-card-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 1.3;
+  color: var(--core-dark);
+  margin: 0;
+}
+
+.region-card-num {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--ink-faint);
+}
+
+.region-card-sub {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-dim);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.region-card-section { display: flex; flex-direction: column; gap: 6px; }
+
+.region-card-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.region-card-body {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-dim);
+  margin: 0;
+}
+
+.region-card-quote {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--core-dark);
+  line-height: 1.45;
+  margin: 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--quiet-lavender);
+}
+
+/* ── 6. Delivery footer ────────────────────────────────────────────── */
+.delivery-block {
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .media-row, .words-gauges {
+    grid-template-columns: 1fr;
+  }
 }
 
 .signal-line {

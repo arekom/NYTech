@@ -14,17 +14,27 @@ type Props = {
 };
 
 type Stage = {
-  id: "receive" | "certainty" | "tempo" | "register" | "ownership" | "seal";
+  id:
+    | "receive"
+    | "certainty"
+    | "tempo"
+    | "register"
+    | "ownership"
+    | "brain"
+    | "synthesis"
+    | "seal";
   name: string;
   subtext: string;
 };
 
 const STAGES: Stage[] = [
-  { id: "receive",   name: "Receiving your take",             subtext: "Captured, safe with us" },
+  { id: "receive",   name: "Receiving your takes",            subtext: "Five answers, captured" },
   { id: "certainty", name: "Mapping certainty vs hedging",    subtext: "How much you already believe it" },
   { id: "tempo",     name: "Reading tempo and pauses",        subtext: "Where you slowed, where you rushed" },
   { id: "register",  name: "Measuring vocal register",        subtext: "When you spoke from truth, not performance" },
   { id: "ownership", name: "Tracking first-person ownership", subtext: "How clearly you're claiming the story" },
+  { id: "brain",     name: "Mapping cortical activations",    subtext: "Where the patterns lit up — TRIBE v2" },
+  { id: "synthesis", name: "Drawing the through-line",        subtext: "Putting words and brain in one frame" },
   { id: "seal",      name: "Sealing for delivery",            subtext: "Ten days. On the dot." },
 ];
 
@@ -168,15 +178,23 @@ async function streamAnalyze(
   session: SessionState,
   onStageDone: (id: Stage["id"]) => void
 ): Promise<AnalyzeResult> {
-  if (!session.audioBlob) throw new Error("no audio to analyze");
+  if (!session.takes.length) throw new Error("no takes to analyze");
 
   const fd = new FormData();
-  fd.append("audio", session.audioBlob, "recording.webm");
   fd.append("firstName", session.firstName);
   fd.append("email", session.email);
   fd.append("focus", session.focus);
-  fd.append("durationSeconds", String(session.durationSeconds));
-  fd.append("register", JSON.stringify(session.register ?? null));
+  fd.append("takeCount", String(session.takes.length));
+
+  // Each take gets its own audio_N, durationSeconds_N, register_N,
+  // questionIndex_N fields. Server iterates 1..takeCount.
+  session.takes.forEach((take, i) => {
+    const n = i + 1;
+    fd.append(`audio_${n}`, take.audioBlob, `take-${n}.webm`);
+    fd.append(`durationSeconds_${n}`, String(take.durationSeconds));
+    fd.append(`register_${n}`, JSON.stringify(take.register));
+    fd.append(`questionIndex_${n}`, String(take.questionIndex));
+  });
 
   const res = await fetch("/api/analyze", { method: "POST", body: fd });
   if (!res.ok || !res.body) {

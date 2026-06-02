@@ -1,0 +1,57 @@
+description: >
+  Heavy catastrophizing + fortune-telling + rumination script. Future-anxiety
+  and decision-paralysis as limiting beliefs. Should NOT fire on entitlement,
+  growth-mindset, or impostor (different cluster).
+
+expected:
+  themes:
+    - what-if
+    - worst-case
+    - paralysis
+
+  repeated_phrases:
+    - "what if"
+    - "I don't know"
+
+  limiting_beliefs:
+    - future-anxiety
+    - decision-paralysis
+  not_limiting_beliefs:
+    - entitlement
+    - impostor-syndrome
+    - hyper-independence
+    - catastrophic-health-anxiety   # general future-anxiety, NOT health-specific
+
+  thinking_patterns:
+    - catastrophizing
+    - fortune-telling
+    - should-statements
+  not_thinking_patterns:
+    - growth-mindset
+    - gratitude
+    - reframing
+    - acceptance
+
+  hedge_count:
+    value: 6
+    tolerance: 4
+  certainty_count:
+    value: 2
+    tolerance: 3
+
+  self_focus_ratio:
+    value: 0.22
+    tolerance: 0.08
+
+  sentiment_score:
+    value: 25
+    tolerance: 12
+  sentiment_category: negative
+
+  dominant_emotion_oneof:
+    - fear
+    - dread
+    - worry
+    - paralysis
+    - apprehension
+    - unease

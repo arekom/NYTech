@@ -5,7 +5,9 @@ import type {
   FutureVision,
   LimitingBelief,
   LimitingBeliefType,
+  LinguisticTags,
   OwnershipSignal,
+  RepeatedPhrase,
   SentimentAnalysis,
   SentimentCategory,
   ThinkingPattern,
@@ -23,6 +25,14 @@ if (!process.env.OPENAI_API_KEY) {
 }
 
 export const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "" });
+
+/**
+ * Fixed seed used on every GPT call for best-effort determinism. OpenAI's
+ * `seed` param is best-effort within a model version, so identical inputs
+ * return identical outputs in practice. The evaluation harness depends on
+ * this so test results are reproducible across CI runs.
+ */
+const ANALYSIS_SEED = 0xA15053; // 'ALSOS' — Alignment Score / SoM
 
 export type TranscriptResult = {
   text: string;
@@ -66,6 +76,7 @@ export type AnalyzeTextResult = {
   certainty: CertaintySignal;
   ownership: OwnershipSignal;
   future_vision: FutureVision;
+  linguistic: LinguisticTags;
   limiting_beliefs: LimitingBelief[];
   thinking_patterns: ThinkingPattern[];
   sentiment: SentimentAnalysis;
@@ -75,6 +86,8 @@ export type AnalyzeTextResult = {
 export async function analyzeText(transcript: string): Promise<AnalyzeTextResult> {
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
+    temperature: 0,
+    seed: ANALYSIS_SEED,
     response_format: {
       type: "json_schema",
       json_schema: {
@@ -117,6 +130,10 @@ export async function analyzeText(transcript: string): Promise<AnalyzeTextResult
       passive_count: o.passive_count,
       third_person_count: o.third_person_count,
       agency_ratio: agencyTotal > 0 ? o.first_person_count / agencyTotal : 0,
+      // self_focus_ratio = first_person / word_count. Word count isn't
+      // available here — caller (analyze route) fills it in once Whisper
+      // returns. Placeholder 0 here keeps the type happy.
+      self_focus_ratio: 0,
       examples: {
         first_person: o.first_person_examples.slice(0, 3),
         passive: o.passive_examples.slice(0, 3),
@@ -129,6 +146,7 @@ export async function analyzeText(transcript: string): Promise<AnalyzeTextResult
       verbatim_quote: v.verbatim_quote,
       summary: validateQuoteOrStrip(v.summary, v.verbatim_quote, transcript),
     },
+    linguistic: buildLinguistic(parsed.linguistic, transcript),
     limiting_beliefs: parsed.limiting_beliefs
       .filter((b) => quoteAppearsInTranscript(b.verbatim_quote, transcript))
       .slice(0, 3)
@@ -171,6 +189,11 @@ export async function analyzeText(transcript: string): Promise<AnalyzeTextResult
       trajectory: parsed.sentiment.trajectory,
       confidence: clamp(parsed.sentiment.confidence, 1, 10),
       summary: parsed.sentiment.summary,
+      // empirical_score + empirical_hits are filled in by the caller (route
+      // or eval harness) once the transcript is available — analyzeText
+      // only gets the transcript and doesn't tokenize it.
+      empirical_score: 0,
+      empirical_hits: 0,
     },
     emerging_patterns: parsed.emerging_patterns.slice(0, 2).map((e) => ({
       pattern: e.pattern,
@@ -206,6 +229,11 @@ type RawGPTOutput = {
   future_vision: {
     verbatim_quote: string;
     summary: string;
+  };
+  linguistic: {
+    themes: string[];
+    repeated_phrases: Array<{ phrase: string; count: number }>;
+    peak_emotional_phrase: string;
   };
   limiting_beliefs: Array<{
     type: string;
@@ -272,6 +300,63 @@ function clamp(n: number, min: number, max: number): number {
 function nullableScore(n: number | null): number | null {
   if (n === null || n === undefined) return null;
   return clamp(n, 0, 100);
+}
+
+/**
+ * Build the linguistic-tags block. Hallucination guards:
+ *   - themes: trim, drop empties, cap at 5, cap each at 3 words
+ *   - repeated_phrases: count real occurrences in the transcript and discard
+ *     any whose actual count is < 2 (GPT loves to invent repetitions). Sort
+ *     by real count desc, cap at 5.
+ *   - peak_emotional_phrase: must appear in transcript verbatim, ≤15 words.
+ */
+function buildLinguistic(
+  raw: { themes: string[]; repeated_phrases: Array<{ phrase: string; count: number }>; peak_emotional_phrase: string },
+  transcript: string
+): LinguisticTags {
+  const themes = raw.themes
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .map((t) => t.split(/\s+/).slice(0, 3).join(" "))
+    .slice(0, 5);
+
+  const verifiedRepeats: RepeatedPhrase[] = [];
+  for (const r of raw.repeated_phrases) {
+    const phrase = r.phrase.trim();
+    if (!phrase) continue;
+    const actual = countOccurrences(phrase, transcript);
+    if (actual >= 2) verifiedRepeats.push({ phrase, count: actual });
+  }
+  verifiedRepeats.sort((a, b) => b.count - a.count);
+
+  let peak = raw.peak_emotional_phrase.trim();
+  const peakWords = peak.split(/\s+/).filter(Boolean);
+  if (peakWords.length > 15) peak = peakWords.slice(0, 15).join(" ");
+  if (peak && !quoteAppearsInTranscript(peak, transcript)) {
+    console.warn("hallucinated peak_emotional_phrase dropped:", JSON.stringify(peak));
+    peak = "";
+  }
+
+  return {
+    themes,
+    repeated_phrases: verifiedRepeats.slice(0, 5),
+    peak_emotional_phrase: peak,
+  };
+}
+
+/** Whitespace-flexible, case-insensitive occurrence count. */
+function countOccurrences(needle: string, haystack: string): number {
+  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+  const n = norm(needle);
+  const h = norm(haystack);
+  if (!n) return 0;
+  let i = 0;
+  let count = 0;
+  while ((i = h.indexOf(n, i)) !== -1) {
+    count++;
+    i += n.length;
+  }
+  return count;
 }
 
 function categoryFromScore(score: number): SentimentCategory {
@@ -345,6 +430,35 @@ const SCHEMA = {
         summary: { type: "string" },
       },
       required: ["verbatim_quote", "summary"],
+    },
+    linguistic: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        themes: {
+          type: "array",
+          items: { type: "string" },
+          description: "3–5 short topic tags, each ≤3 words.",
+        },
+        repeated_phrases: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              phrase: { type: "string" },
+              count: { type: "integer" },
+            },
+            required: ["phrase", "count"],
+          },
+        },
+        peak_emotional_phrase: {
+          type: "string",
+          description:
+            "Single most emotionally loaded verbatim phrase (≤15 words). MUST appear in transcript exactly. Empty string if none stands out.",
+        },
+      },
+      required: ["themes", "repeated_phrases", "peak_emotional_phrase"],
     },
     limiting_beliefs: {
       type: "array",
@@ -438,6 +552,7 @@ const SCHEMA = {
     "certainty",
     "ownership",
     "future_vision",
+    "linguistic",
     "limiting_beliefs",
     "thinking_patterns",
     "sentiment",
@@ -450,7 +565,7 @@ const SYSTEM_PROMPT = `You are the Space of Mind measurement engine. You read a 
 POSITIONING (read this twice):
 Space of Mind is mental fitness infrastructure. It is NOT a wellness trend, NOT a therapy replacement, NOT passive self-care. You are NOT a therapist. You do NOT diagnose. You do NOT name mental-health conditions in user-facing copy. You measure patterns and reflect them back so the person can act.
 
-You extract SEVEN things from the transcript:
+You extract EIGHT things from the transcript:
 
 ═══════════════════════════════════════════════════════════════════════
 1. CERTAINTY vs HEDGING
@@ -472,7 +587,14 @@ Strict counts — only obvious matches.
 1–2 sentence summary anchored on a verbatim key phrase. Mirror what they said. Do not add ambition they did not voice. If they didn't state a clear vision, return empty verbatim_quote and write "You didn't name a vision yet — that's information too."
 
 ═══════════════════════════════════════════════════════════════════════
-4. LIMITING BELIEFS — up to 3, from this fixed 20-cluster taxonomy
+4. LINGUISTIC TAGS — themes, repeated phrases, peak emotional phrase
+═══════════════════════════════════════════════════════════════════════
+- themes: 3–5 short topic tags, EACH ≤3 words. Lowercase noun phrases. ("seed round", "self-doubt", "team dynamics", "burnout", "first hire"). Capture what the recording is ABOUT — not how they felt.
+- repeated_phrases: phrases the speaker said verbatim 2+ times. Each entry { phrase, count }. Phrases that repeat are what's preoccupying them. Skip filler words ("you know", "like", "I mean") unless meaningfully repeated as a tic. Only include if you can verify the phrase appears 2+ times. We will re-count against the transcript and discard hallucinated repetitions.
+- peak_emotional_phrase: the SINGLE most emotionally loaded verbatim phrase in the recording (≤15 words). The moment that mattered most. Empty string if no single phrase stands out. MUST appear in transcript character-for-character.
+
+═══════════════════════════════════════════════════════════════════════
+5. LIMITING BELIEFS — up to 3, from this fixed 20-cluster taxonomy
 ═══════════════════════════════════════════════════════════════════════
 Only label a cluster if you can quote a verbatim phrase that demonstrates it. Order by evidence strength.
 
@@ -500,7 +622,7 @@ Only label a cluster if you can quote a verbatim phrase that demonstrates it. Or
 For each: rate strength 1–10 (presence), confidence 1–10 (your certainty), pull a verbatim quote, write a brand-voice interpretation that quotes the verbatim, list 1–3 associated thinking-pattern slugs that co-activate (from the canonical pattern list below).
 
 ═══════════════════════════════════════════════════════════════════════
-5. THINKING PATTERNS — up to 5 total, mix of unhelpful and helpful
+6. THINKING PATTERNS — up to 5 total, mix of unhelpful and helpful
 ═══════════════════════════════════════════════════════════════════════
 For each, rate strength 1–10, pull up to 3 verbatim examples, write a brand-voice interpretation that quotes one example.
 
@@ -532,7 +654,7 @@ HELPFUL (canonical 10):
 - value-aligned: choices made from values, long-term meaning
 
 ═══════════════════════════════════════════════════════════════════════
-6. SENTIMENT ANALYSIS — multi-dimensional
+7. SENTIMENT ANALYSIS — multi-dimensional
 ═══════════════════════════════════════════════════════════════════════
 - overall_score (0–100): 0–20 very negative · 21–35 negative · 36–45 somewhat negative · 46–55 neutral · 56–65 somewhat positive · 66–80 positive · 81–100 very positive
 - dominant_emotion: single most prevalent emotion (lowercase noun: "hope", "fear", "pride", "shame", "frustration", "calm", etc.)
@@ -543,7 +665,7 @@ HELPFUL (canonical 10):
 - summary: ONE brand-voice sentence translating the score + dominant emotion into an insight. Max 26 words.
 
 ═══════════════════════════════════════════════════════════════════════
-7. EMERGING PATTERNS — up to 2, forward-looking
+8. EMERGING PATTERNS — up to 2, forward-looking
 ═══════════════════════════════════════════════════════════════════════
 A nascent pattern not yet dominant but worth naming. Each: pattern name (short phrase), significance 1–10, recommendation (one brand-voice action sentence — what to do about it).
 
@@ -570,3 +692,6 @@ QUALITY OVER QUANTITY:
 - If unsure, omit.
 
 Return only what the transcript actually contains. Strict counts. Verbatim quotes. No diagnoses.`;
+
+
+
