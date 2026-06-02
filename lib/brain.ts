@@ -29,7 +29,10 @@ export async function renderBrain(audio: Blob): Promise<BrainMap | null> {
     headers["Authorization"] = `Bearer ${process.env.BRAIN_SERVICE_TOKEN}`;
   }
 
-  const res = await fetch(`${url.replace(/\/+$/, "")}/render`, {
+  const target = `${url.replace(/\/+$/, "")}/render`;
+  console.log("[brain] POST", target);
+
+  const res = await fetch(target, {
     method: "POST",
     headers,
     body: fd,
