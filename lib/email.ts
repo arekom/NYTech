@@ -25,6 +25,30 @@ export function deliverySubject() {
   return "She's been waiting. Here's what you told her.";
 }
 
+/**
+ * Parse the `prompt` column out of the sessions row. New rows store the
+ * five-question list as JSON; legacy rows (pre-multi-question refactor)
+ * store a single plain-text prompt. Return a normalized array either way.
+ */
+function parsePrompt(prompt: string): { index: number; text: string }[] {
+  const trimmed = prompt.trim();
+  if (!trimmed) return [];
+  if (trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed) && parsed.every((q) => typeof q?.text === "string")) {
+        return parsed.map((q, i) => ({
+          index: typeof q.index === "number" ? q.index : i + 1,
+          text: q.text,
+        }));
+      }
+    } catch {
+      // fall through to legacy single-prompt path
+    }
+  }
+  return [{ index: 1, text: trimmed }];
+}
+
 export function deliveryHtml({
   firstName,
   prompt,
@@ -40,6 +64,7 @@ export function deliveryHtml({
   });
   const context = eventName ? `${dateStr} — ${eventName}` : dateStr;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://spaceofmind.app";
+  const parsedQuestions = parsePrompt(prompt);
 
   const signalsBlock = signals ? signalsHtml(signals) : "";
 
@@ -67,11 +92,13 @@ export function deliveryHtml({
 
           <tr><td style="padding:24px 0 12px;">
             <div style="font-family:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#5F6264;padding-bottom:8px;">
-              The question you answered
+              ${parsedQuestions.length === 1 ? "The question you answered" : `The ${parsedQuestions.length} questions you answered`}
             </div>
-            <div style="font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:20px;line-height:1.45;color:#1B1B2F;">
-              ${escapeHtml(prompt)}
-            </div>
+            ${parsedQuestions.length === 1
+              ? `<div style="font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:20px;line-height:1.45;color:#1B1B2F;">${escapeHtml(parsedQuestions[0].text)}</div>`
+              : `<ol style="margin:0;padding-left:24px;font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:17px;line-height:1.5;color:#1B1B2F;">${parsedQuestions
+                  .map((q) => `<li style="padding:6px 0;">${escapeHtml(q.text)}</li>`)
+                  .join("")}</ol>`}
           </td></tr>
 
           <tr><td style="padding:24px 0;">
@@ -342,13 +369,18 @@ export function deliveryText({
     month: "long", day: "numeric", year: "numeric",
   });
   const context = eventName ? `${dateStr} — ${eventName}` : dateStr;
+  const parsedQuestions = parsePrompt(prompt);
   const lines: string[] = [
     `Space of Mind · Future Self Studio · ${context}`,
     "",
     `${firstName}, she's been waiting.`,
     "",
-    "The question you answered:",
-    prompt,
+    parsedQuestions.length === 1
+      ? "The question you answered:"
+      : `The ${parsedQuestions.length} questions you answered:`,
+    ...parsedQuestions.map((q) =>
+      parsedQuestions.length === 1 ? q.text : `  ${q.index}. ${q.text}`
+    ),
     "",
     `Your recording: ${audioUrl}`,
     "",
