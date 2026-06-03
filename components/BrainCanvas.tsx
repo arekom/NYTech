@@ -298,16 +298,25 @@ function buildScene(
   };
   rafId = requestAnimationFrame(tick);
 
-  // Resize handling
+  // Resize handling. TrackballControls captures the canvas's bounding
+  // rect on construction to compute drag-to-rotation mapping — if the
+  // canvas was display:none at that moment (which it is while the
+  // activation data is still loading), the controls' internal screen
+  // rect is 0×0 and pointer events map to NaN. Calling handleResize()
+  // here recomputes the rect every time the canvas becomes visible or
+  // changes size.
   const onResize = () => {
     const w = canvas.clientWidth || 400;
     const h = canvas.clientHeight || 300;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    controls.handleResize();
   };
   const ro = new ResizeObserver(onResize);
   ro.observe(canvas);
+  // Initial sync — fires after the canvas has been laid out the first time.
+  controls.handleResize();
 
   const setActiveFrame = (idx: number) => {
     const start = idx * vertexCount;
