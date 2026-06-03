@@ -65,10 +65,9 @@ export default function Confirmation({
             <MediaRow takes={takes} brainMap={signals.brain_map ?? null} />
             <ReasoningIntro />
             <WhatYourWordsSaid signals={signals} />
-            <BrainRegions
-              regions={signals.brain_map?.top_regions ?? []}
-              attributions={signals.synthesis?.region_attributions ?? []}
-            />
+            {/* Top brain regions panel hidden for now — interactive cortex
+                in MediaRow covers this territory visually. Restore by
+                re-rendering <BrainRegions /> with the same props. */}
             <DeliveryFooter firstName={firstName} dateLabel={dateLabel} />
           </>
         ) : (

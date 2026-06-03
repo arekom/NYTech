@@ -165,7 +165,7 @@ async function runFixture(f: Fixture): Promise<FixtureResult> {
   let brain_map: BrainMap | null = null;
   if (!args.noBrain && process.env.BRAIN_SERVICE_URL) {
     try {
-      brain_map = await renderBrain(audioBlob);
+      brain_map = await renderBrain([{ audio: audioBlob }]);
     } catch (err) {
       warnings.push(`brain render failed: ${err instanceof Error ? err.message : String(err)}`);
     }

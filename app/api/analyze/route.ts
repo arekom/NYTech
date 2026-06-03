@@ -140,12 +140,12 @@ export async function POST(req: Request) {
         const registerSignal = buildRegisterSignal(mergeRegister(takes.map((t) => t.register)));
 
         // ── GPT extraction + TRIBE brain render in parallel ──────────────
-        // TRIBE has a 30–120s window; we send the longest single take only.
-        // (Phase 2: smarter selection / per-take brain maps.)
-        const brainAudio = pickBrainTake(takes).audio;
-
+        // Pass ALL takes — the brain-service ffmpeg-concats them server-side
+        // so TRIBE inference covers the full recording. This is what powers
+        // the Confirmation-screen BrainCanvas syncing with every take, not
+        // just the longest one.
         const extractionPromise = analyzeText(taggedTranscript);
-        const brainPromise = renderBrain(brainAudio).catch((err) => {
+        const brainPromise = renderBrain(takes.map((t) => ({ audio: t.audio }))).catch((err) => {
           console.warn("brain render failed:", err instanceof Error ? err.message : err);
           return null as BrainMap | null;
         });
@@ -357,13 +357,6 @@ function mergeRegister(regs: RegisterData[]): RegisterData {
     drop_count,
     rise_count,
   };
-}
-
-/** Pick which take to send to TRIBE (which has a 30–120s limit).
- *  Phase 1 heuristic: the longest take. Most likely to have the richest
- *  emotional material to model. */
-function pickBrainTake(takes: ParsedTake[]): ParsedTake {
-  return [...takes].sort((a, b) => b.durationSeconds - a.durationSeconds)[0];
 }
 
 function pickExt(mime: string): string {

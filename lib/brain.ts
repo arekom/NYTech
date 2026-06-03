@@ -22,7 +22,7 @@ const CONFIRMATION_URL_VALID_HOURS = 24;
  * missing, so the analyze pipeline degrades gracefully — booth output still
  * renders without the brain section if the brain service is unavailable.
  */
-export async function renderBrain(audio: Blob): Promise<BrainMap | null> {
+export async function renderBrain(takes: { audio: Blob }[]): Promise<BrainMap | null> {
   const endpointId = process.env.RUNPOD_ENDPOINT_ID;
   const apiKey = process.env.RUNPOD_API_KEY;
 
@@ -30,18 +30,30 @@ export async function renderBrain(audio: Blob): Promise<BrainMap | null> {
     console.warn("RUNPOD_ENDPOINT_ID or RUNPOD_API_KEY not set — skipping brain render");
     return null;
   }
+  if (!takes.length) {
+    console.warn("renderBrain called with no takes — skipping");
+    return null;
+  }
 
-  // Base64-encode the audio for the JSON payload. RunPod's /runsync accepts
-  // up to ~20 MB; our single-take audio is ~1 MB → ~1.3 MB base64. Fits.
-  const audioBuffer = Buffer.from(await audio.arrayBuffer());
-  const audioB64 = audioBuffer.toString("base64");
-  const audioFormat = audio.type.includes("webm")
+  // Base64-encode each take. RunPod's /runsync accepts up to ~20 MB;
+  // 5 × ~1 MB = ~5 MB raw → ~6.7 MB base64. Well within the limit.
+  // Handler concatenates them with ffmpeg before running TRIBE so
+  // frame_times spans the full multi-take recording.
+  const audioTakesB64: string[] = [];
+  for (const take of takes) {
+    const buf = Buffer.from(await take.audio.arrayBuffer());
+    audioTakesB64.push(buf.toString("base64"));
+  }
+  // All takes come from the same MediaRecorder session → same MIME, so
+  // sample the first to pick a format hint for the handler.
+  const firstType = takes[0].audio.type;
+  const audioFormat = firstType.includes("webm")
     ? "webm"
-    : audio.type.includes("mp4")
+    : firstType.includes("mp4")
     ? "m4a"
-    : audio.type.includes("ogg")
+    : firstType.includes("ogg")
     ? "ogg"
-    : audio.type.includes("wav")
+    : firstType.includes("wav")
     ? "wav"
     : "webm";
 
@@ -51,7 +63,7 @@ export async function renderBrain(audio: Blob): Promise<BrainMap | null> {
   // status="IN_PROGRESS" + a job ID. We then poll /status/{jobId} until
   // the job hits a terminal state.
   const runsyncUrl = `https://api.runpod.ai/v2/${endpointId}/runsync`;
-  console.log("[brain] POST", runsyncUrl);
+  console.log("[brain] POST", runsyncUrl, `(${takes.length} take${takes.length === 1 ? "" : "s"})`);
 
   const res = await fetch(runsyncUrl, {
     method: "POST",
@@ -61,7 +73,7 @@ export async function renderBrain(audio: Blob): Promise<BrainMap | null> {
     },
     body: JSON.stringify({
       input: {
-        audio_b64: audioB64,
+        audio_takes_b64: audioTakesB64,
         audio_format: audioFormat,
       },
     }),
