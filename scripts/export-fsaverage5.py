@@ -60,10 +60,13 @@ def _load_surface_data():
     print("Fetching fsaverage5 from nilearn ...", file=sys.stderr)
     fsavg = datasets.fetch_surf_fsaverage("fsaverage5")
 
-    # Use the INFLATED surface — same one render.py uses for the email PNG,
-    # so the BrainCanvas matches the email visualization.
-    lh_verts, lh_faces = surface.load_surf_mesh(fsavg["infl_left"])
-    rh_verts, rh_faces = surface.load_surf_mesh(fsavg["infl_right"])
+    # Use the PIAL surface (the actual cortical fold geometry) — matches
+    # the Meta TRIBE v2 demo look: visible gyri and sulci with activation
+    # overlaid as a hot heatmap. Pial coords are in shared MNI-like space
+    # so LH and RH are already anatomically positioned (LH at negative X,
+    # RH at positive X) without needing manual per-hemisphere offsets.
+    lh_verts, lh_faces = surface.load_surf_mesh(fsavg["pial_left"])
+    rh_verts, rh_faces = surface.load_surf_mesh(fsavg["pial_right"])
 
     # Sulcal depth (per-vertex scalar). render.py uses this as bg_map to
     # tint folds darker, which gives the brain its recognizable texture.

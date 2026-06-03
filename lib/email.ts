@@ -201,11 +201,17 @@ function signalsHtml(s: SignalData): string {
   `
     : "";
 
-  const brainBlock = s.brain_map
+  // Only render the brain block if we actually have a usable image AND at
+  // least one decoded region. Belt-and-braces guard: a partial row with
+  // brain_map populated but image_url empty (e.g. a render that crashed
+  // mid-pipeline) would otherwise emit a broken <img> in the recipient's
+  // inbox.
+  const brainImageUrl = s.brain_map?.image_url || "";
+  const brainBlock = s.brain_map && brainImageUrl && s.brain_map.top_regions.length
     ? `
     <tr><td style="padding:28px 0 0;">
       ${sectionLabel("Where the patterns lit up")}
-      <img src="${s.brain_map.image_url}" alt="Cortical activation map" style="display:block;width:100%;height:auto;margin-top:10px;border-radius:16px;border:1px solid #E3E3FF;background:#F7F7FF;" />
+      <img src="${brainImageUrl}" alt="Cortical activation map" style="display:block;width:100%;height:auto;margin-top:10px;border-radius:16px;border:1px solid #E3E3FF;background:#F7F7FF;" />
       <div style="margin-top:14px;font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.55;color:#5F6264;">
         ${s.brain_map.top_regions
           .slice(0, 4)
@@ -422,7 +428,11 @@ export function deliveryText({
       for (const r of signals.brain_map.top_regions.slice(0, 4)) {
         lines.push(`  ${r.scientific_name} · ${r.short_function}`);
       }
-      lines.push(`  Image: ${signals.brain_map.image_url}`);
+      // Only print the image URL if we actually have one — otherwise the
+      // recipient sees "Image: undefined" in their plaintext fallback.
+      if (signals.brain_map.image_url) {
+        lines.push(`  Image: ${signals.brain_map.image_url}`);
+      }
       lines.push("");
     }
 

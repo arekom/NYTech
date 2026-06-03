@@ -125,8 +125,18 @@ export async function renderBrain(takes: { audio: Blob }[]): Promise<BrainMap | 
       jobId: runpodResponse.id,
       // Vercel Pro caps the surrounding function at 300s. Budget 250s
       // here, leaving ~50s for Whisper + GPT extract + GPT synthesis +
-      // DB write + uploads in /api/analyze. Cold-cache RunPod renders
-      // are ~3 min; warm-worker steady-state is ~45–60s, well inside.
+      // DB write + uploads in /api/analyze.
+      //
+      // Timing baselines (after the multi-take concat work — TRIBE now
+      // runs on the FULL recording, not just the longest take):
+      //   - Cold worker, cold network cache: ~5–6 min — DOES NOT FIT.
+      //     Mitigated by RunPod network volume + min active workers ≥ 1.
+      //   - Cold worker, warm cache: ~3 min (Llama model + WhisperX env
+      //     load from disk to VRAM).
+      //   - Warm worker, ~3-min recording at text_feature.batch_size=32:
+      //     ~150-200s. Fits.
+      // If embed time keeps dominating, increase batch_size further in
+      // brain-service/inference.py (24 GB L4 has headroom up to ~64).
       maxWaitMs: 250_000,
       pollIntervalMs: 3_000,
     });

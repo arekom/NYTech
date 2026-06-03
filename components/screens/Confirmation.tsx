@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Logo from "@/components/Logo";
 import BrainCanvas from "@/components/BrainCanvas";
 import type {
@@ -170,9 +170,16 @@ function BrainHero({
     return out;
   }, [takes]);
 
-  const onTakeTime = (takeIdx: number, takeCurrentTime: number) => {
-    setGlobalTime((offsets[takeIdx] ?? 0) + takeCurrentTime);
-  };
+  // Stable identity so AudioPlayer's effect (which lists onTakeTime in its
+  // dep array) doesn't re-run on every parent render — which it does,
+  // since setGlobalTime below re-renders this component. Without
+  // useCallback we get an infinite update loop.
+  const onTakeTime = useCallback(
+    (takeIdx: number, takeCurrentTime: number) => {
+      setGlobalTime((offsets[takeIdx] ?? 0) + takeCurrentTime);
+    },
+    [offsets]
+  );
 
   const brainImageUrl = brainMap?.image_url ?? null;
   const hasActivations =

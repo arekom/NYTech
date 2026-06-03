@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { TrackballControls } from "three/examples/jsm/controls/TrackballControls.js";
 
 /**
  * Interactive cortical activation viewer for the Confirmation screen.
@@ -226,10 +227,15 @@ function buildScene(
   renderer.setClearColor(0x000000, 0);
 
   const scene = new THREE.Scene();
-  // Camera framed to show both hemispheres in side-by-side lateral view.
-  // fsaverage5 inflated coords span roughly [-70, 70] mm per hemisphere.
+  // Three-quarter view of both pial hemispheres — camera tilted 35° from
+  // straight-down toward the front (anterior), giving the brain some
+  // depth/3D feel while still showing both hemispheres clearly.
+  //
+  // In the recentered pial frame: +Y = anterior, +Z = superior. Camera
+  // placed at (0, sin(35°)·d, cos(35°)·d) for d ≈ 350 — above-and-forward,
+  // looking back at the brain.
   const camera = new THREE.PerspectiveCamera(35, width / height, 1, 1000);
-  camera.position.set(0, 0, 320);
+  camera.position.set(0, 200, 287);
   camera.lookAt(0, 0, 0);
 
   // Combined geometry: LH and RH packed into one BufferGeometry so we only
@@ -246,11 +252,12 @@ function buildScene(
     vertexShader: VERTEX_SHADER,
     fragmentShader: FRAGMENT_SHADER,
     uniforms: {
-      // Activations below this magnitude render as the neutral sulc-tinted
-      // grey. Matches render.py's 50th-percentile-of-|activation| threshold
-      // in spirit but normalized: our values are pre-scaled to [-1, 1].
-      uThreshold: { value: 0.15 },
-      uSulcStrength: { value: 0.06 },
+      // Below this magnitude the cortex shows its plain sulc-shaded base;
+      // hot overlay only kicks in for real signal. Pre-normalized to [-1, 1].
+      uThreshold: { value: 0.18 },
+      // Sulcal depth shading — bigger = more contrast between folds and
+      // crests. Pial sulc values from FreeSurfer are typically [-3, +3].
+      uSulcStrength: { value: 0.35 },
     },
     side: THREE.DoubleSide, // mesh from FreeSurfer isn't guaranteed-consistent winding
   });
@@ -258,14 +265,34 @@ function buildScene(
   const brainMesh = new THREE.Mesh(geometry, material);
   scene.add(brainMesh);
 
-  // Gentle auto-rotation gives the static brain a sense of life without
-  // demanding user interaction. Speed picked to be subtle — one revolution
-  // every ~60s.
+  // User-driven rotation. TrackballControls gives truly free 3D rotation
+  // — no fixed up-axis, so horizontal/vertical drag rotates the cortex
+  // intuitively in all directions. Same convention as 3D modeling tools.
+  // Zoom + pan disabled — the focal point is the cortex, not the framing.
+  const controls = new TrackballControls(camera, canvas);
+  controls.noZoom = true;
+  controls.noPan = true;
+  controls.rotateSpeed = 3.0;
+  controls.staticMoving = false;
+  controls.dynamicDampingFactor = 0.15;
+  controls.target.set(0, 0, 0);
+
+  // Gentle auto-wobble until the user interacts. After their first drag,
+  // we leave the brain wherever they put it. Rotation around Z reads as
+  // a subtle showcase spin from the three-quarter camera.
+  let userHasInteracted = false;
+  controls.addEventListener("start", () => {
+    userHasInteracted = true;
+  });
+
   let rafId = 0;
   let rotation = 0;
   const tick = () => {
-    rotation += 0.001;
-    brainMesh.rotation.y = Math.sin(rotation) * 0.15;
+    if (!userHasInteracted) {
+      rotation += 0.001;
+      brainMesh.rotation.z = Math.sin(rotation) * 0.15;
+    }
+    controls.update();
     renderer.render(scene, camera);
     rafId = requestAnimationFrame(tick);
   };
@@ -293,6 +320,7 @@ function buildScene(
   const dispose = () => {
     cancelAnimationFrame(rafId);
     ro.disconnect();
+    controls.dispose();
     geometry.dispose();
     material.dispose();
     renderer.dispose();
@@ -308,6 +336,9 @@ function buildBrainGeometry(mesh: MeshData): THREE.BufferGeometry {
   const rhVertCount = mesh.rhVerts.length / 3;
   const totalVerts = lhVertCount + rhVertCount;
 
+  // The pial fsaverage5 mesh is in shared MNI-like coordinates — LH
+  // already sits at negative X, RH at positive X, anatomically correct.
+  // We just concatenate them.
   const positions = new Float32Array(totalVerts * 3);
   positions.set(mesh.lhVerts, 0);
   positions.set(mesh.rhVerts, lhVertCount * 3);
@@ -317,10 +348,7 @@ function buildBrainGeometry(mesh: MeshData): THREE.BufferGeometry {
   sulc.set(mesh.rhSulc, lhVertCount);
 
   // Offset RH face indices so they reference RH verts in the combined buffer.
-  // Need uint32 because total verts > 65535 (well under, but the index buffer
-  // needs to represent values > lh_vert_count which can approach 20k for fsavg5
-  // and still fits in uint16 — but we use uint32 for headroom).
-  const indices = new Uint32Array((mesh.lhFaces.length + mesh.rhFaces.length));
+  const indices = new Uint32Array(mesh.lhFaces.length + mesh.rhFaces.length);
   indices.set(mesh.lhFaces, 0);
   const rhOffset = mesh.lhFaces.length;
   for (let i = 0; i < mesh.rhFaces.length; i++) {
@@ -332,11 +360,13 @@ function buildBrainGeometry(mesh: MeshData): THREE.BufferGeometry {
   geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   geometry.computeVertexNormals();
 
-  // Center the combined mesh on the camera's lookAt point.
+  // Recenter so the combined mesh sits at origin (pial coords have a Y
+  // offset from the AC-PC origin). Camera then orbits a centered brain.
   geometry.computeBoundingSphere();
   if (geometry.boundingSphere) {
     const c = geometry.boundingSphere.center;
     geometry.translate(-c.x, -c.y, -c.z);
+    geometry.computeBoundingSphere();
   }
 
   return geometry;
@@ -419,37 +449,35 @@ const FRAGMENT_SHADER = /* glsl */ `
   uniform float uThreshold;
   uniform float uSulcStrength;
 
-  // Mirrors brain-service/render.py's _BRAND_CMAP. 5 stops, linear interp.
-  vec3 brandColormap(float t) {
-    float u = clamp(0.5 + 0.5 * t, 0.0, 1.0);
-    vec3 c0 = vec3(0.847, 0.863, 0.871); // #D8DCDE
-    vec3 c1 = vec3(0.941, 0.941, 1.000); // #F0F0FF
-    vec3 c2 = vec3(0.706, 0.706, 0.859); // #B4B4DB
-    vec3 c3 = vec3(0.604, 0.714, 0.800); // #9AB6CC
-    vec3 c4 = vec3(0.106, 0.106, 0.184); // #1B1B2F
-    if (u < 0.25) return mix(c0, c1, u * 4.0);
-    if (u < 0.50) return mix(c1, c2, (u - 0.25) * 4.0);
-    if (u < 0.75) return mix(c2, c3, (u - 0.50) * 4.0);
-    return mix(c3, c4, (u - 0.75) * 4.0);
+  // matplotlib "hot" colormap — the Meta TRIBE v2 demo look. Piecewise
+  // linear ramp on R, G, B channels: black → red → orange → yellow → white.
+  vec3 hotColormap(float t) {
+    float u = clamp(t, 0.0, 1.0);
+    float r = clamp(u / 0.375, 0.0, 1.0);
+    float g = clamp((u - 0.375) / 0.375, 0.0, 1.0);
+    float b = clamp((u - 0.75) / 0.25, 0.0, 1.0);
+    return vec3(r, g, b);
   }
 
   void main() {
-    // Below threshold: neutral grey tinted by sulcal depth (deeper folds
-    // = darker), so the recognizable brain texture stays visible.
-    vec3 base = vec3(0.847, 0.863, 0.871);
-    float sulcFactor = clamp(0.7 - vSulc * uSulcStrength, 0.5, 1.0);
-    // NOTE: avoid the names 'active' / 'inactive' — both are reserved in
-    // GLSL ES 3.00, which three.js auto-transpiles to under WebGL2.
-    vec3 baseTint = base * sulcFactor;
+    // Base pial cortex: warm off-white, darkened in fold depths (sulci)
+    // so gyri/sulci structure reads through. Sulc values are positive in
+    // sulci and negative on gyri crests; uSulcStrength controls contrast.
+    vec3 baseLight = vec3(0.92, 0.90, 0.88);
+    float sulcFactor = clamp(1.0 - vSulc * uSulcStrength, 0.45, 1.0);
+    vec3 baseTint = baseLight * sulcFactor;
 
-    vec3 activationTint = brandColormap(vActivation);
+    // Activation overlay: hot colormap on |activation|, faded in around
+    // the threshold so low signal doesn't mask the brain texture.
     float strength = abs(vActivation);
-    vec3 color = mix(baseTint, activationTint, smoothstep(uThreshold, uThreshold + 0.1, strength));
+    vec3 activationTint = hotColormap(strength);
+    float blend = smoothstep(uThreshold, uThreshold + 0.15, strength);
+    vec3 color = mix(baseTint, activationTint, blend);
 
-    // Cheap directional shading — front-lit, no PBR. Just enough for the
-    // surface to feel three-dimensional.
-    vec3 lightDir = normalize(vec3(0.3, 0.6, 1.0));
-    float diff = max(dot(vNormal, lightDir), 0.0) * 0.4 + 0.6;
+    // Soft directional shading — top-down lighting so gyri catch light
+    // and sulci stay shadowed. No PBR; just enough depth cue.
+    vec3 lightDir = normalize(vec3(0.2, 0.5, 1.0));
+    float diff = max(dot(vNormal, lightDir), 0.0) * 0.35 + 0.7;
 
     gl_FragColor = vec4(color * diff, 1.0);
   }
