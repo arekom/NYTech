@@ -187,10 +187,26 @@ function AudioPlayer({ takes }: { takes: Take[] }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
 
+  // MediaRecorder produces fragmented WebM that has no end-of-stream
+  // declaration — `audioElement.duration` reports Infinity until the file
+  // is played to completion. Trust the duration we captured at recording
+  // time on the Take object instead.
+  const activeTake = takes[activeIdx];
+  const knownDuration = activeTake?.durationSeconds ?? 0;
+
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
-    const onTime = () => setProgress(a.duration ? a.currentTime / a.duration : 0);
+    const effectiveDuration = (): number => {
+      // Prefer browser-reported duration if it's actually finite, fall
+      // back to the recorder-captured one we know is real.
+      if (Number.isFinite(a.duration) && a.duration > 0) return a.duration;
+      return knownDuration;
+    };
+    const onTime = () => {
+      const dur = effectiveDuration();
+      setProgress(dur > 0 ? Math.min(1, a.currentTime / dur) : 0);
+    };
     const onEnd = () => setIsPlaying(false);
     a.addEventListener("timeupdate", onTime);
     a.addEventListener("ended", onEnd);
@@ -198,7 +214,7 @@ function AudioPlayer({ takes }: { takes: Take[] }) {
       a.removeEventListener("timeupdate", onTime);
       a.removeEventListener("ended", onEnd);
     };
-  }, [activeIdx]);
+  }, [activeIdx, knownDuration]);
 
   const togglePlay = () => {
     const a = audioRef.current;
@@ -214,8 +230,15 @@ function AudioPlayer({ takes }: { takes: Take[] }) {
 
   const seek = (pct: number) => {
     const a = audioRef.current;
-    if (!a) return;
-    a.currentTime = pct * (a.duration || 0);
+    if (!a || knownDuration <= 0) return;
+    const target = pct * knownDuration;
+    if (!Number.isFinite(target) || target < 0) return;
+    try {
+      a.currentTime = target;
+    } catch {
+      // Some browsers reject seeks before metadata is loaded; ignore.
+      return;
+    }
     setProgress(pct);
   };
 

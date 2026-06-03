@@ -62,11 +62,11 @@ EVENT_NAME="NY Tech Week"
 NEXT_PUBLIC_APP_URL=https://your-deployment.vercel.app
 OPENAI_API_KEY=sk-...   # Whisper (transcription) + GPT-4o-mini (signal extraction)
 
-# Brain map (TRIBE v2 on Railway). Optional — pipeline degrades
+# Brain map (TRIBE v2 on RunPod Serverless). Optional — pipeline degrades
 # gracefully if either is unset.
 # Research / non-commercial use only. See brain-service/README.md.
-BRAIN_SERVICE_URL=https://your-brain-service.up.railway.app
-BRAIN_SERVICE_TOKEN=...same-value-as-SERVICE_AUTH_TOKEN-on-railway...
+RUNPOD_ENDPOINT_ID=...your-runpod-endpoint-id...
+RUNPOD_API_KEY=...your-runpod-api-key...
 
 # Local-only dev shortcut. Set to 1–4 to truncate the question list
 # while testing (saves the 4–6 min booth flow per cycle). DO NOT set
@@ -92,11 +92,12 @@ that signal.
 ## Brain map (research only)
 
 A separate Python sidecar in [`brain-service/`](brain-service/) runs Meta's
-TRIBE v2 model on Railway, returning a brand-styled cortical activation map
-that surfaces on the Confirmation screen and in the delivery email. **CC
-BY-NC license — research / internal demos only, not commercial product use.**
-See [brain-service/README.md](brain-service/README.md) for full deployment
-instructions (HuggingFace access, Railway volume mount, CPU/GPU swap).
+TRIBE v2 model on **RunPod Serverless** (24 GB GPU), returning a brand-styled
+cortical activation map that surfaces on the Confirmation screen and in the
+delivery email. **CC BY-NC license — research / internal demos only, not
+commercial product use.** See [brain-service/README.md](brain-service/README.md)
+for full deployment instructions (HuggingFace access, RunPod endpoint setup,
+network volume for model caches).
 
 ### 4. Initialize the database
 ```powershell
