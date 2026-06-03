@@ -13,7 +13,7 @@ It is not a demo. It is the product experience.
 1. **Welcome** — sets the frame.
 2. **Intake** — first name, email, one priming field.
 3. **Prompt** — the single question, large and centered.
-4. **Recording** — live waveform + counting-up timer, one take, 30s minimum.
+4. **Recording** — live waveform + counting-up timer, one take, 15s minimum.
 5. **Processing** — 45-second theatrical pause while the real upload happens.
 6. **Confirmation** — shows the delivery date; the brand line closes the loop.
 
@@ -62,8 +62,10 @@ EVENT_NAME="NY Tech Week"
 NEXT_PUBLIC_APP_URL=https://your-deployment.vercel.app
 OPENAI_API_KEY=sk-...   # Whisper (transcription) + GPT-4o-mini (signal extraction)
 
-# Brain map (TRIBE v2 on RunPod Serverless). Optional — pipeline degrades
-# gracefully if either is unset.
+# Brain map (TRIBE v2 on RunPod Serverless). Production sets SKIP_BRAIN_RENDER=true
+# so the booth does not block on GPU (see vercel.json). Re-enable RunPod locally
+# by setting SKIP_BRAIN_RENDER=false and both keys below.
+SKIP_BRAIN_RENDER=true
 # Research / non-commercial use only. See brain-service/README.md.
 RUNPOD_ENDPOINT_ID=...your-runpod-endpoint-id...
 RUNPOD_API_KEY=...your-runpod-api-key...
@@ -90,6 +92,11 @@ for the orchestrator. Vocal register (pitch) is computed client-side in
 that signal.
 
 ## Brain map (research only)
+
+**Production (`nytech.spaceofmind.com`) ships with `SKIP_BRAIN_RENDER=true`** so
+analyze does not call RunPod; Confirmation uses transcript-based synthesis and
+audio only. To turn the live cortex back on, set `SKIP_BRAIN_RENDER=false` in
+Vercel and ensure RunPod keys + warm workers are configured.
 
 A separate Python sidecar in [`brain-service/`](brain-service/) runs Meta's
 TRIBE v2 model on **RunPod Serverless** (24 GB GPU), returning a brand-styled

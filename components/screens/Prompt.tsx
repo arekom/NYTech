@@ -74,7 +74,7 @@ export default function Prompt({
             ? "One take next"
             : `Question 1 of ${TOTAL_QUESTIONS} next`}
         </span>
-        <span>30 seconds minimum per take</span>
+        <span>15 seconds minimum per take</span>
       </footer>
     </section>
   );

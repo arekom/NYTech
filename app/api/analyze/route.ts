@@ -25,6 +25,13 @@ export const maxDuration = 300;
 const MAX_AUDIO_BYTES_PER_TAKE = 20 * 1024 * 1024;
 const STAGE_REVEAL_DELAY_MS = 350;
 
+/** When true, skip RunPod TRIBE entirely — booth finishes in ~1–2 min instead
+ *  of waiting on GPU. Confirmation shows audio + word-based synthesis only. */
+function skipBrainRender(): boolean {
+  const v = process.env.SKIP_BRAIN_RENDER?.trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
+}
+
 type ParsedTake = {
   questionIndex: number;
   audio: Blob;
@@ -122,15 +129,21 @@ export async function POST(req: Request) {
         });
         emit({ type: "stage_done", id: "receive" });
 
-        // ── TRIBE brain render in parallel with Whisper (not after) ────────
-        // renderBrain only needs take blobs — no transcript. Starting here
-        // overlaps GPU queue/work with Whisper so we stay inside Vercel's
-        // 300s cap more often on cold RunPod workers.
-        console.log("[analyze] brain render started (parallel with Whisper)");
-        const brainPromise = renderBrain(takes.map((t) => ({ audio: t.audio }))).catch((err) => {
-          console.warn("brain render failed:", err instanceof Error ? err.message : err);
-          return null as BrainMap | null;
-        });
+        // ── TRIBE brain render in parallel with Whisper (optional) ─────────
+        // Not required for delivery: synthesis + Confirmation degrade to
+        // transcript-only when brain_map is null. Set SKIP_BRAIN_RENDER=true
+        // on Vercel if RunPod routinely exceeds the 300s function cap.
+        let brainPromise: Promise<BrainMap | null>;
+        if (skipBrainRender()) {
+          console.log("[analyze] SKIP_BRAIN_RENDER — skipping RunPod brain render");
+          brainPromise = Promise.resolve(null);
+        } else {
+          console.log("[analyze] brain render started (parallel with Whisper)");
+          brainPromise = renderBrain(takes.map((t) => ({ audio: t.audio }))).catch((err) => {
+            console.warn("brain render failed:", err instanceof Error ? err.message : err);
+            return null;
+          });
+        }
 
         // ── Whisper transcription of the full concatenated audio ─────────
         const transcript = await transcribe(concatenated);

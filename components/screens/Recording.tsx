@@ -7,7 +7,7 @@ import { detectPitch, summarizeRegister, type PitchSample, type RegisterData } f
 import type { BoothQuestion } from "@/lib/prompts";
 import { TOTAL_QUESTIONS } from "@/lib/prompts";
 
-const MIN_DURATION_SECONDS = 30;
+const MIN_DURATION_SECONDS = 15;
 const SILENCE_PULSE_AFTER_SECONDS = 10;
 const PITCH_SAMPLE_INTERVAL_MS = 100; // ~10 Hz sampling
 

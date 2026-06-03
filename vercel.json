@@ -1,4 +1,7 @@
 {
+  "env": {
+    "SKIP_BRAIN_RENDER": "true"
+  },
   "crons": [
     {
       "path": "/api/cron/deliver",
