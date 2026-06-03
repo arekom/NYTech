@@ -126,12 +126,15 @@ export async function renderBrain(audio: Blob): Promise<BrainMap | null> {
     throw new Error("runpod returned no brain_image_base64");
   }
 
-  // Persist PNG to Vercel Blob as a private image so the Confirmation
-  // screen + email can reference it by URL.
+  // Persist PNG to Vercel Blob as a PUBLIC image — both the Confirmation
+  // screen (browser <img>) and the delivery email need to load this
+  // directly without auth headers. Privacy is upheld by the random suffix
+  // in the key; URLs aren't enumerable. The brand-styled visualization
+  // itself contains no PII (it's a colored cortex with region labels).
   const png = Buffer.from(data.brain_image_base64, "base64");
-  const key = `brain-maps/${Date.now()}-${cryptoRandom(8)}.png`;
+  const key = `brain-maps/${Date.now()}-${cryptoRandom(12)}.png`;
   const blob = await put(key, png, {
-    access: "private",
+    access: "public",
     contentType: "image/png",
     addRandomSuffix: false,
   });
