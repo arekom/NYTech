@@ -58,15 +58,17 @@ export default function Confirmation({
       <div className="stage-body output-body" data-scrollable>
         {signals ? (
           <>
+            {/* Brain hero — first thing the user sees. The live cortex
+                is the "wow"; everything else explains it. */}
+            <BrainHero takes={takes} brainMap={signals.brain_map ?? null} />
             <ResultHero
               synthesis={signals.synthesis ?? null}
               fallback={fallbackIntro(signals)}
             />
-            <MediaRow takes={takes} brainMap={signals.brain_map ?? null} />
             <ReasoningIntro />
             <WhatYourWordsSaid signals={signals} />
             {/* Top brain regions panel hidden for now — interactive cortex
-                in MediaRow covers this territory visually. Restore by
+                above covers this territory visually. Restore by
                 re-rendering <BrainRegions /> with the same props. */}
             <DeliveryFooter firstName={firstName} dateLabel={dateLabel} />
           </>
@@ -143,7 +145,7 @@ function fallbackIntro(s: SignalData): string {
    2. Audio player + brain
    ───────────────────────────────────────────────────────────────────── */
 
-function MediaRow({
+function BrainHero({
   takes,
   brainMap,
 }: {
@@ -181,36 +183,42 @@ function MediaRow({
 
   if (!takes.length && !brainImageUrl) return null;
 
+  // No brain at all — fall back to a slim audio-only card so the page
+  // still has the player. Rare path (RUNPOD_ENDPOINT_ID unset).
+  if (!brainImageUrl) {
+    return (
+      <section className="brain-hero brain-hero--audio-only">
+        <span className="result-eyebrow">Your audio</span>
+        <AudioPlayer takes={takes} onTakeTime={onTakeTime} />
+      </section>
+    );
+  }
+
   return (
-    <section className="media-row">
-      <div className="media-audio">
-        <span className="signal-label">Your audio</span>
+    <section className="brain-hero">
+      <span className="result-eyebrow">
+        Cortical activation {hasActivations ? "· live with your voice" : "· peak frame"}
+      </span>
+      <div className="brain-hero-stage">
+        {hasActivations && brainMap ? (
+          <BrainCanvas
+            meshUrl="/brain/fsaverage5.bin"
+            activationsUrl={brainMap.activations_url!}
+            frameTimes={brainMap.frame_times}
+            vertexCount={brainMap.vertex_count}
+            frameCount={brainMap.frame_count}
+            peakFramePacked={brainMap.peak_timestep_packed}
+            currentTime={globalTime}
+            fallbackImageUrl={brainImageUrl}
+          />
+        ) : (
+          <img className="brain-hero-image" src={brainImageUrl} alt="Cortical activation map" />
+        )}
+      </div>
+      <div className="brain-hero-audio">
         <AudioPlayer takes={takes} onTakeTime={onTakeTime} />
       </div>
-      {brainImageUrl && (
-        <div className="media-brain">
-          <span className="signal-label">
-            Cortical activation {hasActivations ? "· live with your voice" : "· peak frame"}
-          </span>
-          {hasActivations && brainMap ? (
-            <BrainCanvas
-              meshUrl="/brain/fsaverage5.bin"
-              activationsUrl={brainMap.activations_url!}
-              frameTimes={brainMap.frame_times}
-              vertexCount={brainMap.vertex_count}
-              frameCount={brainMap.frame_count}
-              peakFramePacked={brainMap.peak_timestep_packed}
-              currentTime={globalTime}
-              fallbackImageUrl={brainImageUrl}
-            />
-          ) : (
-            <img className="media-brain-image" src={brainImageUrl} alt="Cortical activation map" />
-          )}
-          <p className="media-brain-foot">
-            TRIBE v2 · research use only
-          </p>
-        </div>
-      )}
+      <p className="brain-hero-foot">TRIBE v2 · research use only</p>
     </section>
   );
 }

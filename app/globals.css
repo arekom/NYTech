@@ -1089,37 +1089,66 @@ input, textarea { font: inherit; color: inherit; }
   margin: 0;
 }
 
-/* ── 2. Media row — audio + brain ──────────────────────────────────── */
-.media-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  align-items: start;
-}
-
-.media-row > div {
+/* ── 2. Brain hero — full-width interactive cortex + audio scrubber ──
+   This is the first thing the user sees post-recording. The cortex is
+   the "wow"; the audio player tucks underneath as a slim driver. */
+.brain-hero {
   background: var(--white);
   border: 1px solid var(--rule);
-  border-radius: 16px;
-  padding: 20px;
+  border-radius: 20px;
+  padding: 28px 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
-.media-brain-image {
+.brain-hero--audio-only {
+  /* No cortex available — slim down so the audio card doesn't look like
+     a giant empty placeholder. */
+  padding: 20px 24px;
+  gap: 12px;
+}
+
+.brain-hero-stage {
+  /* The canvas/PNG itself. Fixed aspect ratio rather than fixed height so
+     it scales gracefully across breakpoints while staying impactful. */
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 320px;
+  background: var(--lavender-mist);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.brain-hero-stage .brain-canvas-wrap,
+.brain-hero-stage canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.brain-hero-image {
   display: block;
   width: 100%;
-  height: auto;
-  border-radius: 10px;
+  height: 100%;
+  object-fit: contain;
   background: var(--lavender-mist);
-  margin-top: 12px;
 }
 
-.media-brain-foot {
-  margin: 10px 0 0;
+.brain-hero-audio {
+  /* Audio controls live below the cortex — visually subordinate, but
+     still the primary interaction (scrubbing drives the brain). */
+  padding-top: 4px;
+}
+
+.brain-hero-foot {
+  margin: 0;
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--ink-faint);
+  text-align: right;
 }
 
 /* Audio player */
@@ -1432,8 +1461,15 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 @media (max-width: 720px) {
-  .media-row, .words-gauges {
+  .words-gauges {
     grid-template-columns: 1fr;
+  }
+  .brain-hero {
+    padding: 20px 18px 18px;
+  }
+  .brain-hero-stage {
+    aspect-ratio: 4 / 3;
+    min-height: 260px;
   }
 }
 

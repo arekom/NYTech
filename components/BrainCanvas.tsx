@@ -141,10 +141,9 @@ export default function BrainCanvas({
       />
       {stage !== "ready" && (
         <img
-          className="media-brain-image"
+          className="brain-hero-image"
           src={fallbackImageUrl}
           alt="Cortical activation map"
-          style={{ width: "100%", display: "block" }}
         />
       )}
     </div>
