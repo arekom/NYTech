@@ -7,8 +7,12 @@ import { detectPitch, summarizeRegister, type PitchSample, type RegisterData } f
 import type { BoothQuestion } from "@/lib/prompts";
 import { TOTAL_QUESTIONS } from "@/lib/prompts";
 
-const MIN_DURATION_SECONDS = 30;
-const SILENCE_PULSE_AFTER_SECONDS = 10;
+// Hard cap per take. Keeps the per-recording audio small enough that the
+// 5-take payload fits under Vercel's 4.5 MB request body limit, and bounds
+// TRIBE inference time on a 5-take concatenated recording.
+const MAX_DURATION_SECONDS = 20;
+const MIN_DURATION_SECONDS = 3;
+const SILENCE_PULSE_AFTER_SECONDS = 8;
 const PITCH_SAMPLE_INTERVAL_MS = 100; // ~10 Hz sampling
 
 type Props = {
@@ -146,6 +150,20 @@ export default function Recording({ firstName, question, onComplete }: Props) {
     return () => clearInterval(id);
   }, [stream]);
 
+  // Hard auto-stop at MAX_DURATION_SECONDS. Fires the same recorder.onstop
+  // path the manual Stop button uses — no special-case handling downstream.
+  useEffect(() => {
+    if (!stream) return;
+    const timeoutId = setTimeout(() => {
+      const r = recorderRef.current;
+      if (r && r.state !== "inactive") {
+        try { r.stop(); } catch {}
+      }
+      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+    }, MAX_DURATION_SECONDS * 1000);
+    return () => clearTimeout(timeoutId);
+  }, [stream]);
+
   const handleStop = useCallback(() => {
     if (seconds < MIN_DURATION_SECONDS) {
       setShowMinGate(true);
@@ -188,7 +206,9 @@ export default function Recording({ firstName, question, onComplete }: Props) {
           <span className="dot" />
           {firstName} · Question {question.index} of {TOTAL_QUESTIONS}
         </span>
-        <span className="timer">{formatTimer(seconds)}</span>
+        <span className="timer">
+          {formatTimer(seconds)} / {formatTimer(MAX_DURATION_SECONDS)}
+        </span>
       </header>
 
       <p className="recording-question">{question.text}</p>
@@ -205,7 +225,7 @@ export default function Recording({ firstName, question, onComplete }: Props) {
         <button className="stop-btn" onClick={handleStop}>
           <span className="square" /> Stop recording
         </button>
-        <span className="label">One take · No pause</span>
+        <span className="label">{MAX_DURATION_SECONDS} seconds · One take</span>
       </footer>
     </section>
   );
