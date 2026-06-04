@@ -15,10 +15,23 @@ export type DeliveryPayload = {
   to: string;
   firstName: string;
   prompt: string;
+  /** Fallback single audio (legacy concat). New sessions also populate
+   *  `takeUrls` — when both are present, the per-take block is the
+   *  primary player and `audioUrl` is only used by clients that strip
+   *  the per-take HTML. */
   audioUrl: string;
+  /** Per-take signed URLs, one per question. Null for legacy rows that
+   *  haven't been migrated to the per-take pathname schema. */
+  takeUrls: TakeAudioUrl[] | null;
   recordedAt: Date;
   eventName: string | null;
   signals: SignalData | null;
+};
+
+export type TakeAudioUrl = {
+  question_index: number;
+  url: string;
+  duration_seconds: number;
 };
 
 export function deliverySubject() {
@@ -53,6 +66,7 @@ export function deliveryHtml({
   firstName,
   prompt,
   audioUrl,
+  takeUrls,
   recordedAt,
   eventName,
   signals,
@@ -67,6 +81,7 @@ export function deliveryHtml({
   const parsedQuestions = parsePrompt(prompt);
 
   const signalsBlock = signals ? signalsHtml(signals) : "";
+  const audioBlock = renderAudioBlock({ audioUrl, takeUrls, questions: parsedQuestions });
 
   // Space of Mind brand palette
   return `<!doctype html>
@@ -102,7 +117,7 @@ export function deliveryHtml({
           </td></tr>
 
           <tr><td style="padding:24px 0;">
-            <audio controls src="${audioUrl}" style="width:100%;"></audio>
+            ${audioBlock}
           </td></tr>
 
           ${signalsBlock}
@@ -128,6 +143,43 @@ export function deliveryHtml({
     </table>
   </body>
 </html>`;
+}
+
+/**
+ * Audio section. When `takeUrls` is present (new-schema sessions), render
+ * one player per question with its prompt above. When null (legacy rows
+ * recorded before the per-take refactor), fall back to a single player
+ * pointed at the byte-concatenated WebM — which most email clients will
+ * only play the first take of, but it's still better than nothing.
+ */
+function renderAudioBlock({
+  audioUrl,
+  takeUrls,
+  questions,
+}: {
+  audioUrl: string;
+  takeUrls: TakeAudioUrl[] | null;
+  questions: { index: number; text: string }[];
+}): string {
+  if (!takeUrls || takeUrls.length === 0) {
+    return `<audio controls src="${audioUrl}" style="width:100%;"></audio>`;
+  }
+  const byIndex = new Map(questions.map((q) => [q.index, q.text]));
+  const sorted = [...takeUrls].sort((a, b) => a.question_index - b.question_index);
+  const rows = sorted.map((t) => {
+    const promptText = byIndex.get(t.question_index) ?? `Question ${t.question_index}`;
+    return `
+      <tr><td style="padding:14px 0;border-top:1px solid #E3E3FF;">
+        <div style="font-family:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#5F6264;padding-bottom:6px;">
+          Q${t.question_index} · ${Math.round(t.duration_seconds)}s
+        </div>
+        <div style="font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.45;color:#1B1B2F;padding-bottom:10px;">
+          ${escapeHtml(promptText)}
+        </div>
+        <audio controls src="${t.url}" style="width:100%;"></audio>
+      </td></tr>`;
+  });
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${rows.join("")}</table>`;
 }
 
 function synthesisHtml(s: SignalData): string {
@@ -367,6 +419,7 @@ export function deliveryText({
   firstName,
   prompt,
   audioUrl,
+  takeUrls,
   recordedAt,
   eventName,
   signals,
@@ -388,9 +441,20 @@ export function deliveryText({
       parsedQuestions.length === 1 ? q.text : `  ${q.index}. ${q.text}`
     ),
     "",
-    `Your recording: ${audioUrl}`,
-    "",
   ];
+
+  // Per-take URLs when present, single legacy URL otherwise.
+  if (takeUrls && takeUrls.length > 0) {
+    lines.push("Your recordings:");
+    const sorted = [...takeUrls].sort((a, b) => a.question_index - b.question_index);
+    for (const t of sorted) {
+      lines.push(`  Q${t.question_index} (${Math.round(t.duration_seconds)}s): ${t.url}`);
+    }
+    lines.push("");
+  } else {
+    lines.push(`Your recording: ${audioUrl}`);
+    lines.push("");
+  }
 
   if (signals) {
     if (signals.synthesis && signals.synthesis.findings.length) {

@@ -35,7 +35,12 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetBrainsMono.variable}`}>
-      <body>{children}</body>
+      {/* suppressHydrationWarning: Grammarly + similar extensions inject
+          attributes on <body> after SSR (data-new-gr-c-s-check-loaded,
+          data-gr-ext-installed, etc.), which trips React's hydration
+          mismatch check. We can't control extensions; suppress is the
+          documented escape hatch and only affects this one element. */}
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

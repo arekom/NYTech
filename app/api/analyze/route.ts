@@ -12,6 +12,7 @@ import {
   type BrainMap,
   type SignalData,
   type Synthesis,
+  type TakeAudio,
 } from "@/lib/signals";
 import type { RegisterData } from "@/lib/pitch";
 import { QUESTIONS } from "@/lib/prompts";
@@ -108,18 +109,40 @@ export async function POST(req: Request) {
       };
 
       try {
-        // ── Concatenate takes into a single audio blob for Whisper + Blob storage
+        // Concatenate IN MEMORY for Whisper, which needs continuous audio
+        // for word-level timestamps that span all questions. We do NOT
+        // upload this concat to Blob — byte-level WebM concat produces a
+        // file where browsers only play the first segment, so each take
+        // goes to Blob as its own playable file below.
         const concatenated = await concatBlobs(takes.map((t) => t.audio));
         const totalDuration = takes.reduce((s, t) => s + t.durationSeconds, 0);
 
-        // ── Stage 1: receive — upload concatenated audio to Blob ─────────
-        const ext = pickExt(concatenated.type);
-        const key = `recordings/${Date.now()}-${cryptoRandom(12)}${ext}`;
-        const blob = await put(key, concatenated, {
-          access: "private",
-          contentType: concatenated.type || "audio/webm",
-          addRandomSuffix: false,
-        });
+        // ── Stage 1: receive — upload each take individually to Blob ─────
+        // Folder-per-session keeps it easy to list/cleanup all of a
+        // session's takes with a single prefix. Pathname shape:
+        //   recordings/<timestamp>-<rand>/q<N>.webm
+        const sessionFolder = `${Date.now()}-${cryptoRandom(12)}`;
+        const takeUploads = await Promise.all(
+          takes.map(async (take) => {
+            const ext = pickExt(take.audio.type);
+            const key = `recordings/${sessionFolder}/q${take.questionIndex}${ext}`;
+            const uploaded = await put(key, take.audio, {
+              access: "private",
+              contentType: take.audio.type || "audio/webm",
+              addRandomSuffix: false,
+            });
+            return { uploaded, take };
+          })
+        );
+        const takeAudios: TakeAudio[] = takeUploads.map(({ uploaded, take }) => ({
+          question_index: take.questionIndex,
+          pathname: uploaded.pathname,
+          duration_seconds: take.durationSeconds,
+        }));
+        // Legacy `audio_*` columns point at the first take so any old reader
+        // (an un-updated cron, a manual SQL query, etc.) still gets a valid
+        // single playable URL — just Q1's audio instead of all five.
+        const primaryUpload = takeUploads[0].uploaded;
         emit({ type: "stage_done", id: "receive" });
 
         // ── Whisper transcription of the full concatenated audio ─────────
@@ -210,6 +233,7 @@ export async function POST(req: Request) {
           emerging_patterns: extraction.emerging_patterns,
           brain_map,
           synthesis,
+          takes: takeAudios,
         };
 
         const recordedAt = new Date();
@@ -230,7 +254,7 @@ export async function POST(req: Request) {
             recorded_at, deliver_at
           ) values (
             ${firstName}, ${email}, ${focus}, ${promptStored},
-            ${blob.url}, ${blob.pathname},
+            ${primaryUpload.url}, ${primaryUpload.pathname},
             ${Math.round(transcript.duration || totalDuration)},
             ${eventName}, ${taggedTranscript},
             ${sql.json(signalData as unknown as Parameters<typeof sql.json>[0])},

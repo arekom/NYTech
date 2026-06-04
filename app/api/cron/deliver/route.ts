@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { del, issueSignedToken, presignUrl } from "@vercel/blob";
 import { sql, type Session } from "@/lib/db";
-import { resend, FROM, deliverySubject, deliveryHtml, deliveryText } from "@/lib/email";
+import {
+  resend,
+  FROM,
+  deliverySubject,
+  deliveryHtml,
+  deliveryText,
+  type TakeAudioUrl,
+} from "@/lib/email";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -65,11 +72,26 @@ export async function GET(req: Request) {
         signals.brain_map!.activations_url = await mintSignedGet(activationsPathname, validUntil);
       }
 
+      // Re-sign per-take audio if this session was recorded under the new
+      // schema (one Blob file per question). Legacy rows have signals.takes
+      // missing/empty — the email falls back to the single `audioUrl` above.
+      let takeUrls: TakeAudioUrl[] | null = null;
+      if (signals?.takes && signals.takes.length > 0) {
+        takeUrls = await Promise.all(
+          signals.takes.map(async (t) => ({
+            question_index: t.question_index,
+            url: await mintSignedGet(t.pathname, validUntil),
+            duration_seconds: t.duration_seconds,
+          }))
+        );
+      }
+
       const html = deliveryHtml({
         to: row.email,
         firstName: row.first_name,
         prompt: row.prompt,
         audioUrl: presignedUrl,
+        takeUrls,
         recordedAt: new Date(row.recorded_at),
         eventName: row.event_name,
         signals,
@@ -79,6 +101,7 @@ export async function GET(req: Request) {
         firstName: row.first_name,
         prompt: row.prompt,
         audioUrl: presignedUrl,
+        takeUrls,
         recordedAt: new Date(row.recorded_at),
         eventName: row.event_name,
         signals,
@@ -110,8 +133,10 @@ export async function GET(req: Request) {
 
   // ---------------- Phase 2: Cleanup ----------------
   // Delete blobs for sessions delivered more than LISTEN_WINDOW_DAYS ago.
-  const expired = await sql<Pick<Session, "id" | "audio_pathname">[]>`
-    select id, audio_pathname from sessions
+  // Per session: legacy audio_pathname + every per-take pathname + brain
+  // image + brain activations. We pull signal_data so we know all of them.
+  const expired = await sql<Pick<Session, "id" | "audio_pathname" | "signal_data">[]>`
+    select id, audio_pathname, signal_data from sessions
     where audio_pathname is not null
       and delivered_at is not null
       and delivered_at <= now() - interval '${sql.unsafe(String(LISTEN_WINDOW_DAYS))} days'
@@ -120,8 +145,23 @@ export async function GET(req: Request) {
 
   for (const row of expired) {
     try {
-      if (!row.audio_pathname) continue;
-      await del(row.audio_pathname);
+      const toDelete: string[] = [];
+      if (row.audio_pathname) toDelete.push(row.audio_pathname);
+      const takes = row.signal_data?.takes ?? [];
+      for (const t of takes) {
+        // Don't double-delete if audio_pathname happens to equal the first
+        // take's pathname (which is the case for new sessions).
+        if (t.pathname && !toDelete.includes(t.pathname)) toDelete.push(t.pathname);
+      }
+      const brainImage = row.signal_data?.brain_map?.image_pathname;
+      if (brainImage) toDelete.push(brainImage);
+      const brainActivations = row.signal_data?.brain_map?.activations_pathname;
+      if (brainActivations) toDelete.push(brainActivations);
+
+      if (toDelete.length === 0) continue;
+
+      // @vercel/blob's del() accepts an array — single round-trip.
+      await del(toDelete);
       await sql`
         update sessions
         set audio_pathname = null, audio_url = ''

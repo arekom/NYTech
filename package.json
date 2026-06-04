@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "db:init": "node --env-file=.env.local --import tsx scripts/init-db.ts",
+    "blobs:cleanup": "node --env-file=.env.local --import tsx scripts/cleanup-orphan-blobs.ts",
+    "blobs:migrate-takes": "node --env-file=.env.local --import tsx scripts/migrate-takes.ts",
     "evals": "node --env-file=.env.local --import tsx evals/run-evals.ts"
   },
   "dependencies": {
