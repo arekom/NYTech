@@ -161,25 +161,39 @@ function renderAudioBlock({
   takeUrls: TakeAudioUrl[] | null;
   questions: { index: number; text: string }[];
 }): string {
+  // Gmail (and several other webmail clients) strip <audio> tags during
+  // sanitization, so every player is paired with a "Listen" pill link to
+  // the same URL. <a> always survives — clicking opens the file in a new
+  // tab where the browser plays it natively.
   if (!takeUrls || takeUrls.length === 0) {
-    return `<audio controls src="${audioUrl}" style="width:100%;"></audio>`;
+    return `
+      <audio controls src="${audioUrl}" style="width:100%;"></audio>
+      <div style="padding-top:10px;">${listenButton(audioUrl, "Listen to your recording")}</div>
+    `;
   }
   const byIndex = new Map(questions.map((q) => [q.index, q.text]));
   const sorted = [...takeUrls].sort((a, b) => a.question_index - b.question_index);
   const rows = sorted.map((t) => {
     const promptText = byIndex.get(t.question_index) ?? `Question ${t.question_index}`;
     return `
-      <tr><td style="padding:14px 0;border-top:1px solid #E3E3FF;">
+      <tr><td style="padding:16px 0;border-top:1px solid #E3E3FF;">
         <div style="font-family:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#5F6264;padding-bottom:6px;">
-          Q${t.question_index} · ${Math.round(t.duration_seconds)}s
+          Q${t.question_index}${t.duration_seconds ? ` · ${Math.round(t.duration_seconds)}s` : ""}
         </div>
         <div style="font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.45;color:#1B1B2F;padding-bottom:10px;">
           ${escapeHtml(promptText)}
         </div>
-        <audio controls src="${t.url}" style="width:100%;"></audio>
+        <audio controls src="${t.url}" style="width:100%;display:block;margin-bottom:8px;"></audio>
+        ${listenButton(t.url, `Listen to Q${t.question_index}`)}
       </td></tr>`;
   });
   return `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${rows.join("")}</table>`;
+}
+
+/** Pill-shaped link button. Survives Gmail's HTML sanitization where
+ *  <audio> tags do not. Visually matches the "Finish" CTA at the bottom. */
+function listenButton(href: string, label: string): string {
+  return `<a href="${href}" style="display:inline-block;font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:500;font-size:13px;letter-spacing:0.02em;color:#FFFFFF;background:#1B1B2F;text-decoration:none;border-radius:999px;padding:10px 18px;">▶ ${escapeHtml(label)}</a>`;
 }
 
 function synthesisHtml(s: SignalData): string {
