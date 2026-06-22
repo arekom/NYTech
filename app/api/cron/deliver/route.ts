@@ -121,9 +121,16 @@ export async function GET(req: Request) {
 
       if (send.error) throw new Error(send.error.message || "resend error");
 
+      // Store Resend's message id so the webhook can correlate later delivery/
+      // bounce/complaint events back to this row. delivery_status starts at
+      // 'sent' (accepted by Resend) and is advanced by /api/webhooks/resend.
+      const resendEmailId = send.data?.id ?? null;
       await sql`
         update sessions
-        set delivered_at = now()
+        set delivered_at = now(),
+            resend_email_id = ${resendEmailId},
+            delivery_status = 'sent',
+            delivery_updated_at = now()
         where id = ${row.id}
       `;
 

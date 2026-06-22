@@ -142,7 +142,6 @@ export function deliveryHtml({
               ${para("That matters more than you know.")}
               ${q4 ? para("You also told us what staying has cost you.") + quoteRow(q4) : ""}
               ${para("The gap between who you are right now and who you described in that room — that&rsquo;s not a failure.")}
-              ${para("That gap is the work. And the work deserves a home.")}
             </table>
           </td></tr>
 
@@ -155,6 +154,7 @@ export function deliveryHtml({
 
           <tr><td style="padding-top:28px;">
             <table width="100%" cellpadding="0" cellspacing="0">
+              ${para("That gap is the work. And the work deserves a home.")}
               ${para("Which is exactly why we built Space of Mind.")}
               ${para("What you did at the Future Self Studio was a glimpse of what&rsquo;s possible when you get out of your own way and actually meet yourself — your future self — with honesty.")}
               ${para("That&rsquo;s what our app is built to hold.")}
@@ -638,8 +638,6 @@ export function deliveryText({
   }
   lines.push("The gap between who you are right now and who you described in that room — that's not a failure.");
   lines.push("");
-  lines.push("That gap is the work. And the work deserves a home.");
-  lines.push("");
 
   // Hear yourself again — per-take URLs when present, single legacy URL otherwise.
   lines.push("HEAR YOURSELF AGAIN");
@@ -655,6 +653,8 @@ export function deliveryText({
   }
 
   // The pitch.
+  lines.push("That gap is the work. And the work deserves a home.");
+  lines.push("");
   lines.push("Which is exactly why we built Space of Mind.");
   lines.push("");
   lines.push("What you did at the Future Self Studio was a glimpse of what's possible when you get out of your own way and actually meet yourself — your future self — with honesty.");

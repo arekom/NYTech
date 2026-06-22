@@ -21,7 +21,13 @@ async function main() {
       signal_data jsonb,
       recorded_at timestamptz not null default now(),
       deliver_at timestamptz not null,
-      delivered_at timestamptz
+      delivered_at timestamptz,
+      -- Resend correlation + real delivery lifecycle (updated by the webhook).
+      -- delivered_at means "handed to Resend successfully" (won't re-send);
+      -- delivery_status reflects what actually happened to the message.
+      resend_email_id text,
+      delivery_status text,
+      delivery_updated_at timestamptz
     )
   `;
 
@@ -29,9 +35,14 @@ async function main() {
   await sql`alter table sessions add column if not exists audio_pathname text`;
   await sql`alter table sessions add column if not exists transcript text`;
   await sql`alter table sessions add column if not exists signal_data jsonb`;
+  await sql`alter table sessions add column if not exists resend_email_id text`;
+  await sql`alter table sessions add column if not exists delivery_status text`;
+  await sql`alter table sessions add column if not exists delivery_updated_at timestamptz`;
 
   await sql`create index if not exists sessions_deliver_at_idx on sessions (deliver_at) where delivered_at is null`;
   await sql`create index if not exists sessions_cleanup_idx on sessions (delivered_at) where audio_pathname is not null`;
+  // Webhook events correlate back to a session by the Resend email id.
+  await sql`create index if not exists sessions_resend_email_id_idx on sessions (resend_email_id)`;
 
   console.log("sessions table ready");
   await sql.end();
