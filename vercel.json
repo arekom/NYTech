@@ -1,6 +1,6 @@
 {
   "env": {
-    "SKIP_BRAIN_RENDER": "true"
+    "SKIP_BRAIN_RENDER": "false"
   },
   "crons": [
     {
