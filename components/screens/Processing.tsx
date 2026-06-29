@@ -35,7 +35,7 @@ const STAGES: Stage[] = [
   { id: "tempo",     name: "Reading tempo and pauses",        subtext: "Where you slowed, where you rushed" },
   { id: "register",  name: "Measuring vocal register",        subtext: "When you spoke from truth, not performance" },
   { id: "ownership", name: "Tracking first-person ownership", subtext: "How clearly you're claiming the story" },
-  { id: "brain",     name: "Mapping cortical activations",    subtext: "Where the patterns lit up — TRIBE v2" },
+  { id: "brain",     name: "Mapping cortical activations",    subtext: "Mapping where the patterns lit up" },
   { id: "synthesis", name: "Drawing the through-line",        subtext: "Putting words and brain in one frame" },
   { id: "seal",      name: "Sealing for delivery",            subtext: "Ten days. On the dot." },
 ];

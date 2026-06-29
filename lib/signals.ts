@@ -512,6 +512,26 @@ export type SignalData = {
   // so it has full context. Optional — if the synthesis call fails, the
   // booth still renders all the underlying data.
   synthesis?: Synthesis | null;
+
+  // Per-take audio files in Vercel Blob. One entry per question. The cron
+  // re-signs `pathname` at email-send time (it stores the raw pathname,
+  // not a URL, since signed URLs expire). Sorted by question_index.
+  //
+  // Legacy rows recorded before the per-take refactor have this field
+  // missing/empty; in that case the email + cleanup fall back to the
+  // single `sessions.audio_pathname` column (a byte-concatenated WebM
+  // whose Q2-Q5 are unplayable — known issue, migration script fixes).
+  takes?: TakeAudio[];
+};
+
+export type TakeAudio = {
+  /** 1-based question number, matches QUESTIONS[i].index */
+  question_index: number;
+  /** Vercel Blob pathname (NOT a signed URL). Cron mints URLs from this. */
+  pathname: string;
+  /** Recorder-captured duration. MediaRecorder's audio.duration is Infinity
+   *  on fragmented WebM, so this is the truth for total/scrubber math. */
+  duration_seconds: number;
 };
 
 /* ─────────────────────────────────────────────────────────────────────────
