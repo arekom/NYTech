@@ -21,6 +21,10 @@ export type Screen =
   | "processing"
   | "confirmation";
 
+function triggerBrainWarmup() {
+  fetch("/api/brain/warmup", { method: "POST" }).catch(() => {});
+}
+
 /** One audio take, captured for one question. */
 export type Take = {
   questionIndex: number; // 1..5
@@ -100,6 +104,7 @@ export default function Page() {
           initial={{ firstName: session.firstName, email: session.email, focus: session.focus }}
           onContinue={(data) => {
             update(data);
+            triggerBrainWarmup();
             setScreen("prompt");
           }}
         />

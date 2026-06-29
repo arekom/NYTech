@@ -1,5 +1,6 @@
 import { put, issueSignedToken, presignUrl } from "@vercel/blob";
 import type { BrainMap, CorticalRegion } from "@/lib/signals";
+import { markBrainWarmed } from "./brain-warm-state";
 
 /** Confirmation-screen signed URL validity. 24 hours covers the booth
  *  experience + any operator debugging the same day. The cron mints a
@@ -197,6 +198,8 @@ export async function renderBrain(takes: { audio: Blob }[]): Promise<BrainMap | 
     activationsUrl = await mintSignedGetUrl(activationsBlob.pathname, validUntil);
     activationsPathname = activationsBlob.pathname;
   }
+
+  markBrainWarmed();
 
   return {
     image_url: imageSignedUrl,

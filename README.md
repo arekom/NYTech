@@ -8,6 +8,37 @@ It is not a demo. It is the product experience.
 
 ---
 
+## Repositories & deployment
+
+| Repo | Role |
+|------|------|
+| **[arekom/NYTech](https://github.com/arekom/NYTech)** | Primary fork — develop here, push here, connect to Vercel |
+| **[stevenelite0106/NYTech](https://github.com/stevenelite0106/NYTech)** | Upstream — pull updates from here, open PRs when ready to merge back |
+
+**Day-to-day workflow**
+
+```bash
+git push origin master          # publishes to arekom/NYTech
+git fetch upstream              # check for upstream changes
+git merge upstream/master       # bring upstream into your fork when needed
+```
+
+`upstream` is configured fetch-only locally so pushes never land on stevenelite0106 by accident.
+
+**Vercel (arekom fork, brain enabled)**
+
+1. In [Vercel](https://vercel.com) → **Add New Project** → import **arekom/NYTech** (not the upstream repo).
+2. Attach **Postgres** and **Blob** stores (or paste the same env vars from upstream if you share infrastructure).
+3. Set env vars from `.env.example`. For brain maps, you **must** set:
+   - `RUNPOD_ENDPOINT_ID` and `RUNPOD_API_KEY`
+   - `SKIP_BRAIN_RENDER=false` — already set in `vercel.json` for this fork; do **not** override it to `true` in the Vercel dashboard unless you want to disable brain again.
+4. Set `NEXT_PUBLIC_APP_URL` to your Vercel deployment URL (or custom domain).
+5. Deploy from `master`. Every push to `arekom/NYTech` triggers a new deployment.
+
+The upstream booth deployment (`nytech.spaceofmind.com`) keeps brain off for reliability. This fork is the brain-on environment.
+
+---
+
 ## Flow
 
 1. **Welcome** — sets the frame.
@@ -62,10 +93,9 @@ EVENT_NAME="NY Tech Week"
 NEXT_PUBLIC_APP_URL=https://your-deployment.vercel.app
 OPENAI_API_KEY=sk-...   # Whisper (transcription) + GPT-4o-mini (signal extraction)
 
-# Brain map (TRIBE v2 on RunPod Serverless). Production sets SKIP_BRAIN_RENDER=true
-# so the booth does not block on GPU (see vercel.json). Re-enable RunPod locally
-# by setting SKIP_BRAIN_RENDER=false and both keys below.
-SKIP_BRAIN_RENDER=true
+# Brain map (TRIBE v2 on RunPod Serverless). This fork's vercel.json sets
+# SKIP_BRAIN_RENDER=false for Vercel. For local dev without RunPod, use true.
+SKIP_BRAIN_RENDER=false
 # Research / non-commercial use only. See brain-service/README.md.
 RUNPOD_ENDPOINT_ID=...your-runpod-endpoint-id...
 RUNPOD_API_KEY=...your-runpod-api-key...
@@ -93,10 +123,28 @@ that signal.
 
 ## Brain map (research only)
 
-**Production (`nytech.spaceofmind.com`) ships with `SKIP_BRAIN_RENDER=true`** so
-analyze does not call RunPod; Confirmation uses transcript-based synthesis and
-audio only. To turn the live cortex back on, set `SKIP_BRAIN_RENDER=false` in
-Vercel and ensure RunPod keys + warm workers are configured.
+This fork deploys with **`SKIP_BRAIN_RENDER=false`** (see `vercel.json`) so analyze calls RunPod and Confirmation shows the cortical map.
+
+The upstream booth (`nytech.spaceofmind.com`) ships with brain off for reliability. To disable brain on your Vercel project, set `SKIP_BRAIN_RENDER=true` in the dashboard (overrides `vercel.json`).
+
+### Proactive GPU warmup
+
+When a visitor completes **Intake** (name / email / focus), the booth fires a
+fire-and-forget `POST /api/brain/warmup`. That submits an async RunPod `/run`
+job with `{ warmup_only: true }` so the GPU worker spins up during Prompt +
+Recording (~3–8 min before `/api/analyze`), not during Processing.
+
+- **Intake trigger**: `app/page.tsx` → `triggerBrainWarmup()` on `onContinue`
+- **Q1 belt-and-suspenders**: `Recording.tsx` re-triggers warmup on first
+  question mount if the user lingered on Prompt
+- **Debounce**: per serverless instance, skips if warmed within the last 4 min
+  (`lib/brain-warm-state.ts`; RunPod idle timeout is 300s)
+- **Successful render** extends the debounce window via `markBrainWarmed()` in
+  `lib/brain.ts`
+
+`warmup_only` loads TRIBE + atlases (worker init). The first real render still
+pays WhisperX + Llama unless a prior full job cached them — but starting the
+container during Intake is a large win vs a fully cold worker at Processing time.
 
 A separate Python sidecar in [`brain-service/`](brain-service/) runs Meta's
 TRIBE v2 model on **RunPod Serverless** (24 GB GPU), returning a brand-styled

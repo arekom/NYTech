@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { transcribe, analyzeText } from "@/lib/analyze";
 import { renderBrain } from "@/lib/brain";
+import { skipBrainRender } from "@/lib/brain-config";
 import { synthesize } from "@/lib/synthesis";
 import { empiricalSentiment } from "@/lib/sentiment-empirical";
 import { auditSignalData } from "@/lib/forbidden-words";
@@ -25,13 +26,6 @@ export const maxDuration = 300;
 
 const MAX_AUDIO_BYTES_PER_TAKE = 20 * 1024 * 1024;
 const STAGE_REVEAL_DELAY_MS = 350;
-
-/** When true, skip RunPod TRIBE entirely — booth finishes in ~1–2 min instead
- *  of waiting on GPU. Confirmation shows audio + word-based synthesis only. */
-function skipBrainRender(): boolean {
-  const v = process.env.SKIP_BRAIN_RENDER?.trim().toLowerCase();
-  return v === "1" || v === "true" || v === "yes";
-}
 
 type ParsedTake = {
   questionIndex: number;

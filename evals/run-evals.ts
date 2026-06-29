@@ -24,6 +24,7 @@ import yaml from "js-yaml";
 
 import { transcribe, analyzeText } from "@/lib/analyze";
 import { renderBrain } from "@/lib/brain";
+import { getRunpodConfig } from "@/lib/brain-config";
 import { synthesize } from "@/lib/synthesis";
 import { empiricalSentiment } from "@/lib/sentiment-empirical";
 import {
@@ -72,7 +73,7 @@ async function main() {
 
   console.log("");
   console.log(`Running ${filtered.length} fixture${filtered.length === 1 ? "" : "s"}...`);
-  console.log(`  brain render: ${args.noBrain ? "SKIPPED (--no-brain)" : "enabled (if BRAIN_SERVICE_URL set)"}`);
+  console.log(`  brain render: ${args.noBrain ? "SKIPPED (--no-brain)" : "enabled (if RUNPOD_* set)"}`);
   console.log(`  synthesis:    ${args.noSynth ? "SKIPPED (--no-synth)" : "enabled"}`);
   console.log("");
 
@@ -163,14 +164,14 @@ async function runFixture(f: Fixture): Promise<FixtureResult> {
 
   // ── Brain (optional) ───────────────────────────────────────────
   let brain_map: BrainMap | null = null;
-  if (!args.noBrain && process.env.BRAIN_SERVICE_URL) {
+  if (!args.noBrain && getRunpodConfig()) {
     try {
       brain_map = await renderBrain([{ audio: audioBlob }]);
     } catch (err) {
       warnings.push(`brain render failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   } else if (!args.noBrain) {
-    warnings.push("BRAIN_SERVICE_URL unset — brain render skipped");
+    warnings.push("RUNPOD_ENDPOINT_ID / RUNPOD_API_KEY unset — brain render skipped");
   }
 
   // ── Synthesis (optional) ───────────────────────────────────────

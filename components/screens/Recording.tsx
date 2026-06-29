@@ -38,6 +38,14 @@ export default function Recording({ firstName, question, onComplete }: Props) {
   const rafRef = useRef<number | null>(null);
   const pitchSamplesRef = useRef<PitchSample[]>([]);
   const lastPitchSampleAtRef = useRef<number>(0);
+  const warmupTriggeredRef = useRef(false);
+
+  // Belt-and-suspenders: re-warm if user sits on Prompt a long time before Q1.
+  useEffect(() => {
+    if (question.index !== 1 || warmupTriggeredRef.current) return;
+    warmupTriggeredRef.current = true;
+    fetch("/api/brain/warmup", { method: "POST" }).catch(() => {});
+  }, [question.index]);
 
   // Acquire mic and start recorder
   useEffect(() => {
