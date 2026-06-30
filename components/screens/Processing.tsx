@@ -200,7 +200,17 @@ async function streamAnalyze(
 
   const res = await fetch("/api/analyze", { method: "POST", body: fd });
   if (!res.ok || !res.body) {
-    throw new Error(`HTTP ${res.status}`);
+    // Validation failures (400/413) return a JSON { error } body — surface it
+    // so the staff/console see WHY (e.g. "take 2 too short") instead of a bare
+    // status code.
+    let detail = "";
+    try {
+      const body = await res.json();
+      if (body?.error) detail = `: ${body.error}`;
+    } catch {
+      // non-JSON (e.g. a platform 413 page) — fall back to the status alone
+    }
+    throw new Error(`HTTP ${res.status}${detail}`);
   }
 
   const reader = res.body.getReader();

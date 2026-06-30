@@ -89,7 +89,10 @@ export async function POST(req: Request) {
       if (audio.size > MAX_AUDIO_BYTES_PER_TAKE) {
         return NextResponse.json({ error: `audio_${n} too large` }, { status: 413 });
       }
-      if (!Number.isFinite(duration) || duration < 5) {
+      // Must match the client's MIN_DURATION_SECONDS gate in Recording.tsx (3s).
+      // If this is stricter than the client, takes the booth happily accepts
+      // get rejected here with a 400 the user can't recover from.
+      if (!Number.isFinite(duration) || duration < 3) {
         return NextResponse.json({ error: `take ${n} too short` }, { status: 400 });
       }
       const register: RegisterData = registerJson ? JSON.parse(registerJson) : emptyRegister();
