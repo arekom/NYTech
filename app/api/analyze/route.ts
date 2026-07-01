@@ -229,6 +229,62 @@ export async function POST(req: Request) {
         await sleep(STAGE_REVEAL_DELAY_MS);
         emit({ type: "stage_done", id: "ownership", data: extraction.ownership });
 
+        // ── Persist the core session NOW, before the (potentially long)
+        //    brain wait ────────────────────────────────────────────────
+        // renderBrain can take minutes on a cold RunPod worker, and this whole
+        // function is capped at maxDuration=300s. If we waited for brain +
+        // synthesis before the first DB write, a slow render would let the
+        // function time out with NOTHING saved — the brain data streams to the
+        // Confirmation screen, but the row never lands. So we insert the core
+        // session immediately and UPDATE it with brain + synthesis once they
+        // finish. If the function dies mid-render, the session is still saved,
+        // just without the brain/synthesis layers.
+        const recordedAt = new Date();
+        const delayMinutes = process.env.DELIVERY_DELAY_MINUTES
+          ? Number(process.env.DELIVERY_DELAY_MINUTES)
+          : Number(process.env.DELIVERY_DELAY_DAYS || 10) * 24 * 60;
+        const deliverAt = new Date(recordedAt.getTime() + delayMinutes * 60_000);
+        const eventName = process.env.EVENT_NAME || null;
+        // Store the question list (JSON) as the "prompt" field for the cron
+        // path. Keeps schema unchanged.
+        const promptStored = JSON.stringify(QUESTIONS);
+
+        const baseSignalData: SignalData = {
+          transcript: taggedTranscript,
+          duration_seconds: transcript.duration || totalDuration,
+          word_count: wordCount,
+          certainty: extraction.certainty,
+          tempo: tempoSignal,
+          register: registerSignal,
+          ownership: extraction.ownership,
+          future_vision: extraction.future_vision,
+          linguistic: extraction.linguistic,
+          limiting_beliefs: extraction.limiting_beliefs,
+          thinking_patterns: extraction.thinking_patterns,
+          sentiment: extraction.sentiment,
+          emerging_patterns: extraction.emerging_patterns,
+          brain_map: null,
+          synthesis: null,
+          takes: takeAudios,
+        };
+
+        const inserted = await sql<{ id: string }[]>`
+          insert into sessions (
+            first_name, email, focus, prompt, audio_url, audio_pathname,
+            duration_seconds, event_name, transcript, signal_data,
+            recorded_at, deliver_at
+          ) values (
+            ${firstName}, ${email}, ${focus}, ${promptStored},
+            ${primaryUpload.url}, ${primaryUpload.pathname},
+            ${Math.round(transcript.duration || totalDuration)},
+            ${eventName}, ${taggedTranscript},
+            ${sql.json(baseSignalData as unknown as Parameters<typeof sql.json>[0])},
+            ${recordedAt}, ${deliverAt}
+          )
+          returning id
+        `;
+        const sessionId = inserted[0].id;
+
         // ── Wait on brain (still running in parallel) ────────────────────
         const brain_map: BrainMap | null = await brainPromise;
         emit({ type: "stage_done", id: "brain", data: brain_map });
@@ -248,51 +304,23 @@ export async function POST(req: Request) {
         }
         emit({ type: "stage_done", id: "synthesis", data: synthesis });
 
-        // ── Seal — persist to DB ─────────────────────────────────────────
-        const signalData: SignalData = {
-          transcript: taggedTranscript,
-          duration_seconds: transcript.duration || totalDuration,
-          word_count: wordCount,
-          certainty: extraction.certainty,
-          tempo: tempoSignal,
-          register: registerSignal,
-          ownership: extraction.ownership,
-          future_vision: extraction.future_vision,
-          linguistic: extraction.linguistic,
-          limiting_beliefs: extraction.limiting_beliefs,
-          thinking_patterns: extraction.thinking_patterns,
-          sentiment: extraction.sentiment,
-          emerging_patterns: extraction.emerging_patterns,
-          brain_map,
-          synthesis,
-          takes: takeAudios,
-        };
-
-        const recordedAt = new Date();
-        const delayMinutes = process.env.DELIVERY_DELAY_MINUTES
-          ? Number(process.env.DELIVERY_DELAY_MINUTES)
-          : Number(process.env.DELIVERY_DELAY_DAYS || 10) * 24 * 60;
-        const deliverAt = new Date(recordedAt.getTime() + delayMinutes * 60_000);
-        const eventName = process.env.EVENT_NAME || null;
-
-        // Store the question list (JSON) as the "prompt" field for the cron
-        // path. Keeps schema unchanged.
-        const promptStored = JSON.stringify(QUESTIONS);
-
-        await sql`
-          insert into sessions (
-            first_name, email, focus, prompt, audio_url, audio_pathname,
-            duration_seconds, event_name, transcript, signal_data,
-            recorded_at, deliver_at
-          ) values (
-            ${firstName}, ${email}, ${focus}, ${promptStored},
-            ${primaryUpload.url}, ${primaryUpload.pathname},
-            ${Math.round(transcript.duration || totalDuration)},
-            ${eventName}, ${taggedTranscript},
-            ${sql.json(signalData as unknown as Parameters<typeof sql.json>[0])},
-            ${recordedAt}, ${deliverAt}
-          )
-        `;
+        // ── Update the saved row with the brain + synthesis layers ───────
+        const signalData: SignalData = { ...baseSignalData, brain_map, synthesis };
+        try {
+          await sql`
+            update sessions
+            set signal_data = ${sql.json(signalData as unknown as Parameters<typeof sql.json>[0])}
+            where id = ${sessionId}
+          `;
+        } catch (err) {
+          // The core row is already safe; log and keep going so the booth still
+          // shows the Confirmation using the in-memory brain data.
+          console.error(
+            "brain/synthesis update failed for",
+            sessionId,
+            err instanceof Error ? err.message : err
+          );
+        }
 
         // Production audit — any clinical jargon that slipped past prompt
         // constraints gets logged to stderr so we can spot it in Vercel
