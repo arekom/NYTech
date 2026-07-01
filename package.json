@@ -12,6 +12,7 @@
     "blobs:migrate-takes": "node --env-file=.env.local --import tsx scripts/migrate-takes.ts",
     "audio:backfill": "node --env-file=.env.local --import tsx scripts/backfill-audio-mp3.ts",
     "emails:status": "node --env-file=.env.local --import tsx scripts/check-delivery.ts",
+    "sessions:copy": "node --env-file=.env.local --import tsx scripts/copy-sessions.ts",
     "evals": "node --env-file=.env.local --import tsx evals/run-evals.ts"
   },
   "dependencies": {
